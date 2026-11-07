@@ -1,0 +1,33 @@
+# Secretos
+.env
+*.pem
+*.key
+keys/
+.appsec/
+
+# Datos locales
+data/
+*.db
+*.sqlite3
+logs/
+*.log
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+dist/
+build/
+
+# Editores
+.vscode/
+.idea/
+.spyproject/
+Thumbs.db
+desktop.ini
+.DS_Store
