@@ -1,3 +1,4 @@
 -r requirements-client.txt
 -r requirements-server.txt
+-r requirements-verifier.txt
 pytest==9.2.0

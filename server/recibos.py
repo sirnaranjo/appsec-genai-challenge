@@ -65,8 +65,10 @@ def emitir(solicitud, usuario, id_analisis, advertencias, modelo, version_prompt
             # tree: contenido completo del commit; base: tree del padre contra el que se calcularon los cambios
             "tree": solicitud.tree_hash,
             "base": solicitud.tree_base,
+            # Qué archivos vio el LLM y la huella de su contenido exacto: el verificador recalcula
+            # los diffs del commit y comprueba que sean los mismos que se analizaron
+            "rutas": sorted(archivo.ruta for archivo in solicitud.archivos),
             "contenido": huella_contenido(solicitud.archivos),
-            "archivos": len(solicitud.archivos),
             "advertencias": advertencias,
             "modelo": modelo,
             "prompt": version_prompt,

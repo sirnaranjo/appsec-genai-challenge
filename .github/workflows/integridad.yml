@@ -1,0 +1,43 @@
+name: Integridad de commits
+
+on:
+  # pull_request_target ejecuta este workflow y el verificador tal como están en la rama base:
+  # un pull request no puede modificarlos para que la verificación pase
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verificar:
+    name: Verificar recibos de integridad
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar la rama base
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Los commits del pull request solo se leen como datos; su código nunca se ejecuta
+      - name: Traer los commits del pull request
+        if: github.event_name == 'pull_request_target'
+        run: git fetch --no-tags origin "pull/${NUMERO_PR}/head"
+        env:
+          NUMERO_PR: ${{ github.event.pull_request.number }}
+
+      - name: Instalar el verificador
+        run: |
+          python3 -m venv /tmp/verificador
+          /tmp/verificador/bin/pip install --quiet -r requirements-verifier.txt
+
+      - name: Verificar recibos
+        run: /tmp/verificador/bin/python verifier/verificar.py --resumen "$GITHUB_STEP_SUMMARY" "${DESDE}..${HASTA}"
+        env:
+          # La llave pública viene de una variable del repositorio, que un pull request no puede cambiar
+          APPSEC_PUBLIC_KEY: ${{ vars.APPSEC_PUBLIC_KEY }}
+          DESDE: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.base.sha || github.event.before }}
+          HASTA: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.head.sha || github.event.after }}

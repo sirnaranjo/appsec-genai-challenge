@@ -5,6 +5,23 @@ from pathlib import Path
 
 LINEAS_CONTEXTO = 10
 
+# El verificador del repositorio remoto vuelve a generar estos diffs y debe obtener exactamente
+# el mismo texto: se fijan todas las opciones que de otro modo dependen de la configuración local.
+# Debe coincidir con OPCIONES_DIFF en verifier/recibos.py
+OPCIONES_DIFF = [
+    "--no-color",
+    "--no-ext-diff",
+    "--no-textconv",
+    "--no-renames",
+    "--no-relative",
+    "--full-index",
+    "--src-prefix=a/",
+    "--dst-prefix=b/",
+    "--diff-algorithm=myers",
+    "--indent-heuristic",
+    f"-U{LINEAS_CONTEXTO}",
+]
+
 
 def git(*args):
     # Se ejecuta git sin shell para evitar inyección de comandos
@@ -25,7 +42,7 @@ def tree_hash():
 
 
 def diff_staged(ruta):
-    return git("diff", "--cached", f"-U{LINEAS_CONTEXTO}", "--", ruta)
+    return git("-c", "core.quotepath=on", "diff", "--cached", *OPCIONES_DIFF, "--", ruta)
 
 
 def contenido_staged(ruta):
