@@ -5,7 +5,8 @@ import re
 from server import ajustes, analizador
 from server.modelos import SolicitudAnalisis
 
-PATRON_MARCA = re.compile(r"<cambios_([0-9a-f]{16})>")
+ETIQUETA = "cambios_"
+PATRON_MARCA = re.compile(rf"<{ETIQUETA}([0-9a-f]{{16}})>")
 
 
 def solicitud(contenido="+x = 1", ruta="app.py"):
@@ -30,7 +31,7 @@ def test_el_contenido_no_puede_usar_la_marca():
 def test_la_marca_abre_y_cierra_la_etiqueta():
     mensaje = analizador.armar_mensaje(solicitud())
     marca = PATRON_MARCA.search(mensaje).group(1)
-    assert f"</cambios_{marca}>" in mensaje
+    assert f"</{ETIQUETA}{marca}>" in mensaje
 
 
 def test_la_ruta_se_escapa():

@@ -54,7 +54,7 @@ def panel_hallazgo(hallazgo, es_bloqueante):
     if es_bloqueante:
         titulo = Text(f"🚨 Vulnerabilidad detectada: {hallazgo['titulo']}", style=color)
     else:
-        titulo = Text(f"⚠ Advertencia: {hallazgo['titulo']}", style=color)
+        titulo = Text(f"▲ Advertencia: {hallazgo['titulo']}", style=color)
     return Panel(Group(*partes), title=titulo, title_align="left", border_style=color, padding=(1, 2))
 
 
