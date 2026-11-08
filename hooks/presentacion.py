@@ -64,11 +64,11 @@ def mostrar_resultado(resultado):
     bloqueantes = [h for h in hallazgos if bloquea(h, resultado["severidad_bloqueo"])]
 
     if not resultado["aprobado"]:
-        consola.print(Text(f"✖ Commit rechazado: vulnerabilidades detectadas: {len(bloqueantes)}", style="bold red"))
+        consola.print(Text(f"✗ Commit rechazado: vulnerabilidades detectadas: {len(bloqueantes)}", style="bold red"))
     elif hallazgos:
-        consola.print(Text(f"✔ Análisis aprobado con advertencias: {len(hallazgos)}", style="bold green"))
+        consola.print(Text(f"✓ Análisis aprobado con advertencias: {len(hallazgos)}", style="bold green"))
     else:
-        consola.print(Text("✔ Análisis aprobado", style="bold green"))
+        consola.print(Text("✓ Análisis aprobado", style="bold green"))
 
     for hallazgo in hallazgos:
         consola.print(panel_hallazgo(hallazgo, hallazgo in bloqueantes))
@@ -82,6 +82,6 @@ def mostrar_resultado(resultado):
 
 
 def mostrar_error(mensaje, detalles=()):
-    consola.print(Text(f"✖ {limpiar(mensaje)}", style="bold red"))
+    consola.print(Text(f"✗ {limpiar(mensaje)}", style="bold red"))
     for detalle in detalles:
         consola.print(Text(f"  {limpiar(detalle)}"))
