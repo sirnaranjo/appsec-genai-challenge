@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 
 from server import ajustes, main
 from server.analizador import ErrorAnalisis
+from server.autenticacion import Usuario, usuario_autenticado
 from server.modelos import Hallazgo
 
 cliente = TestClient(main.app)
@@ -24,8 +25,12 @@ def hallazgo(severidad):
 
 
 @pytest.fixture(autouse=True)
-def umbral_media(monkeypatch):
+def configuracion(monkeypatch):
     monkeypatch.setattr(ajustes, "SEVERIDAD_BLOQUEO", "MEDIA")
+    # La autenticación se prueba aparte en test_autenticacion.py
+    main.app.dependency_overrides[usuario_autenticado] = lambda: Usuario(login="dev", id=1)
+    yield
+    main.app.dependency_overrides.clear()
 
 
 def test_health():
@@ -48,6 +53,7 @@ def test_respuesta_incluye_trazabilidad(monkeypatch):
     monkeypatch.setattr(main, "analizar", lambda solicitud: [])
     datos = cliente.post("/analyze", json=SOLICITUD).json()
     assert datos["id_analisis"]
+    assert datos["usuario"] == "dev"
     assert datos["version_prompt"] == ajustes.PROMPT_VERSION
     assert datos["severidad_bloqueo"] == "MEDIA"
 

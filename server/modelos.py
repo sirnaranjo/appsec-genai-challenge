@@ -48,6 +48,7 @@ class Hallazgo(BaseModel):
 class ResultadoAnalisis(BaseModel):
     id_analisis: str
     aprobado: bool
+    usuario: str
     modelo: str
     version_prompt: str
     severidad_bloqueo: str

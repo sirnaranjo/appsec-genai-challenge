@@ -75,7 +75,7 @@ def mostrar_resultado(resultado):
 
     consola.print(
         Text(
-            f"Análisis {resultado['id_analisis']} · {resultado['modelo']} · {resultado['version_prompt']}",
+            f"Análisis {resultado['id_analisis']} · {resultado['usuario']} · {resultado['modelo']} · {resultado['version_prompt']}",
             style="dim",
         )
     )

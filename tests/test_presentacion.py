@@ -5,6 +5,7 @@ import presentacion
 RESULTADO = {
     "id_analisis": "1234",
     "aprobado": False,
+    "usuario": "dev",
     "modelo": "modelo",
     "version_prompt": "v",
     "severidad_bloqueo": "MEDIA",

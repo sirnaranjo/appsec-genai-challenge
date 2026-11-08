@@ -2,6 +2,7 @@
 
 import sys
 
+import autenticacion
 import cliente_api
 import git_cambios
 import presentacion
@@ -35,6 +36,12 @@ def main(rutas):
     if not rutas:
         return 0
 
+    # El hook no puede pedir el login porque pre-commit captura la salida; se hace con login.py
+    token = autenticacion.token_guardado()
+    if not token:
+        presentacion.mostrar_error(f"Commit rechazado: no hay una sesión iniciada. {cliente_api.MENSAJE_LOGIN}")
+        return 1
+
     paquete = construir_paquete(rutas)
 
     # Lo que no se puede analizar no se aprueba (fail closed)
@@ -45,7 +52,7 @@ def main(rutas):
         return 1
 
     try:
-        resultado = cliente_api.solicitar_analisis(paquete)
+        resultado = cliente_api.solicitar_analisis(paquete, token)
     except cliente_api.ErrorServidor as error:
         # Si el servidor no responde el commit tampoco se aprueba
         presentacion.mostrar_error(f"Commit rechazado: {error}")
