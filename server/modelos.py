@@ -50,4 +50,5 @@ class ResultadoAnalisis(BaseModel):
     aprobado: bool
     modelo: str
     version_prompt: str
+    severidad_bloqueo: str
     hallazgos: list[Hallazgo]

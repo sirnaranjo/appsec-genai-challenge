@@ -52,5 +52,6 @@ def analyze(solicitud: SolicitudAnalisis):
         aprobado=aprobado,
         modelo=ajustes.ANTHROPIC_MODEL,
         version_prompt=VERSION_PROMPT,
+        severidad_bloqueo=ajustes.SEVERIDAD_BLOQUEO,
         hallazgos=hallazgos,
     )
