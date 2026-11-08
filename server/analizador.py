@@ -1,4 +1,11 @@
-"""Análisis de seguridad de los cambios usando un LLM (Claude)."""
+"""Análisis de seguridad de los cambios usando un LLM (Claude).
+
+El análisis combina dos capas:
+1. Pre-filtro determinístico (prefiltro.py): detecta intentos de manipulación y patrones peligrosos sin usar IA.
+2. LLM: analiza los diffs con el prompt versionado de config/prompts y responde con un esquema fijo.
+La respuesta del LLM se trata como un dato no confiable: se valida contra el esquema y se contrasta con
+el pre-filtro. Las decisiones de aprobar o rechazar no las toma el LLM sino main.py.
+"""
 
 import functools
 import html
@@ -18,6 +25,7 @@ log = logging.getLogger("appsec")
 PATRON_VARIABLE = re.compile(r"\{\{(MARCA|SENALES|CAMBIOS)\}\}")
 
 
+# Esquema que la respuesta del LLM debe cumplir; la API lo exige con salidas estructuradas
 class RespuestaModelo(BaseModel):
     hallazgos: list[Hallazgo]
 
@@ -27,6 +35,8 @@ class ErrorAnalisis(Exception):
 
 
 def cargar_prompt():
+    # El prompt vive en un archivo versionado del servidor: el desarrollador no lo ve ni lo puede
+    # modificar, cada cambio queda en el historial y cambiar de versión no requiere tocar el código.
     # safe_load evita ejecutar objetos arbitrarios al leer el YAML
     with open(ajustes.RUTA_PROMPT, encoding="utf-8") as archivo:
         return yaml.safe_load(archivo)
@@ -44,6 +54,7 @@ def cliente():
 
 
 def armar_cambios(solicitud):
+    # Cada archivo va en su propio bloque; la ruta se escapa porque la controla quien hace el commit
     bloques = []
     for archivo in solicitud.archivos:
         ruta = html.escape(archivo.ruta, quote=True)
@@ -107,6 +118,7 @@ def consultar_modelo(solicitud, senales):
             messages=[{"role": "user", "content": armar_mensaje(solicitud, senales)}],
             # La respuesta debe cumplir el esquema; no se acepta texto libre
             output_format=RespuestaModelo,
+            # Esfuerzo configurable: equilibra la profundidad del análisis con la espera del commit
             output_config={"effort": ajustes.ANTHROPIC_EFFORT},
             # Si el modelo rechaza la solicitud por sus filtros, se reintenta con otro modelo
             betas=["server-side-fallback-2026-07-01"],
@@ -127,6 +139,8 @@ def consultar_modelo(solicitud, senales):
         time.monotonic() - inicio,
     )
 
+    # Cualquier respuesta que no se pueda usar termina en ErrorAnalisis y el servidor rechaza el
+    # commit (fail closed). refusal: los filtros del modelo declinaron incluso con el respaldo
     if respuesta.stop_reason == "refusal":
         raise ErrorAnalisis("El modelo rechazó la solicitud")
     if respuesta.stop_reason == "max_tokens":

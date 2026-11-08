@@ -1,6 +1,15 @@
 """Verificación de los recibos de integridad: firma del servidor y correspondencia con el commit.
 
 Solo necesita la llave pública: puede ejecutarse donde no hay acceso al servidor de análisis.
+Para cada commit se comprueba, en orden:
+1. Que tenga recibo, o que sea un merge automático sin contenido propio.
+2. La firma Ed25519 del servidor.
+3. El emisor y que el análisis haya sido aprobado.
+4. tree: el contenido del commit es el que se analizó.
+5. base: el análisis se calculó contra el padre real del commit (detecta un --amend).
+6. Huella del contenido: lo que vio el LLM son exactamente los cambios del commit y no falta
+   ningún archivo de código (detecta un cliente modificado que envía diffs falsos).
+7. Opcionalmente, que el recibo pertenezca al usuario esperado.
 """
 
 import base64
