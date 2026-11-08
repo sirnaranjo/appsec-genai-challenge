@@ -1,8 +1,8 @@
-"""Hook de pre-commit: recolecta los cambios en staging para su análisis."""
+"""Hook de pre-commit: envía los cambios en staging al servidor de análisis de seguridad."""
 
-import json
 import sys
 
+import cliente_api
 import git_cambios
 
 MAX_BYTES_ARCHIVO = 100_000
@@ -30,6 +30,24 @@ def validar_tamano(paquete):
     return errores
 
 
+def mostrar_resultado(resultado):
+    if resultado["aprobado"]:
+        print(f"Análisis aprobado. Id: {resultado['id_analisis']}")
+        return
+
+    print(f"Commit rechazado. Vulnerabilidades encontradas: {len(resultado['hallazgos'])}")
+    for hallazgo in resultado["hallazgos"]:
+        print()
+        print(f"[{hallazgo['severidad']}] {hallazgo['titulo']} ({hallazgo['owasp']})")
+        print(f"  Archivo: {hallazgo['archivo']}" + (f", línea {hallazgo['linea']}" if hallazgo["linea"] else ""))
+        print(f"  Riesgo: {hallazgo['riesgo']}")
+        print(f"  Solución: {hallazgo['solucion']}")
+        if hallazgo["codigo_sugerido"]:
+            print(f"  Código sugerido: {hallazgo['codigo_sugerido']}")
+    print()
+    print(f"Id del análisis: {resultado['id_analisis']}")
+
+
 def main(rutas):
     if not rutas:
         return 0
@@ -45,8 +63,15 @@ def main(rutas):
         print("Divide el cambio en commits más pequeños o excluye los archivos generados.")
         return 1
 
-    print(json.dumps(paquete, indent=2, ensure_ascii=False))
-    return 0
+    try:
+        resultado = cliente_api.solicitar_analisis(paquete)
+    except cliente_api.ErrorServidor as error:
+        # Si el servidor no responde el commit tampoco se aprueba
+        print(f"Commit rechazado: {error}")
+        return 1
+
+    mostrar_resultado(resultado)
+    return 0 if resultado["aprobado"] else 1
 
 
 if __name__ == "__main__":

@@ -5,6 +5,7 @@ repos:
         name: Analisis de seguridad
         entry: python hooks/genai_scan.py
         language: python
+        additional_dependencies: [httpx==0.28.1, python-dotenv==1.2.4]
         types_or: [python, javascript, jsx, ts, tsx, java, go, php, ruby, html]
         require_serial: true
         verbose: true
