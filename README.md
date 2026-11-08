@@ -7,6 +7,7 @@ Evidencia en este repositorio:
 - [Ejecuciones de la verificación de integridad](https://github.com/sirnaranjo/appsec-genai-challenge/actions)
 - [PR #1](https://github.com/sirnaranjo/appsec-genai-challenge/pull/1): commit hecho con `--no-verify` e intento de desactivar el verificador. Bloqueado, no se pudo integrar.
 - [PR #2](https://github.com/sirnaranjo/appsec-genai-challenge/pull/2): commit con recibo válido. Integrado.
+- [Capturas de la salida real](#capturas) del hook y del servidor Git con `pre-receive`.
 
 ## Contenido
 
@@ -112,6 +113,14 @@ El verificador (`verifier/recibos.py`) solo necesita la llave pública y comprue
 
 Con el ruleset de `main` configurado (sección 2), un commit sin recibo válido no puede entrar a la rama protegida.
 
+### Rechazo del push en un servidor Git propio
+
+GitHub.com no permite ejecutar lógica propia mientras recibe un push, por lo que la Action detecta y contiene: el código sin análisis puede llegar a una rama, pero no a `main`. En un servidor Git que permita hooks (GitHub Enterprise Server, GitLab autoadministrado, Gitea o un repositorio propio), `verifier/pre_receive.py` aplica el mismo verificador durante la recepción del push: si un commit nuevo no tiene un recibo válido, ninguna rama se actualiza y el código no llega al remoto.
+
+- Verifica todos los commits nuevos de cada rama del push, incluidas las ramas nuevas. Un commit inválido rechaza el push completo.
+- Lee los filtros del hook desde la configuración ya aceptada en el servidor, no desde la del push, para que un push no pueda agregar sus propias exclusiones.
+- Puede exigir que los recibos pertenezcan al usuario autenticado que hace el push, a partir de la variable que exponga cada servidor (por ejemplo `GITEA_PUSHER_NAME` o `GL_USERNAME`).
+
 ### Escalabilidad, rendimiento y fricción
 
 Valores medidos durante el desarrollo:
@@ -169,8 +178,7 @@ Señales para monitorear en el servidor:
 
 | Alternativa | Qué aporta | Por qué no se implementó |
 |---|---|---|
-| Hook `pre-receive` en el servidor Git | Rechaza el push antes de que el código llegue al repositorio | GitHub.com no permite hooks propios en el servidor. Disponible en GitHub Enterprise Server, GitLab autoadministrado o Gitea, y reutilizaría el mismo verificador |
-| Gitea como servidor intermedio con réplica a GitHub | Rechazo del push y GitHub como copia de solo lectura | Requiere operar un servidor adicional |
+| Gitea como servidor intermedio con réplica a GitHub | Rechazo del push con `verifier/pre_receive.py` y GitHub como copia de solo lectura | Requiere operar un servidor adicional. El hook está incluido y se demuestra con `scripts/demo_pre_receive.py` |
 | GitLab.com | Bloquea merges con "Pipelines must succeed" incluso en repositorios privados del plan gratuito | Los tokens OAuth vencen cada 2 horas y requerir aprobación de Code Owners es de pago |
 | Evaluación asíncrona con portal | Sin espera en el commit | El modo síncrono da la respuesta inmediata en el momento del commit |
 | Firma de commits del desarrollador (GPG o SSH) | Refuerza la identidad del autor | No prueba que el código fue analizado. Queda como complemento opcional |
@@ -343,6 +351,23 @@ python scripts/demo.py
 python scripts/demo.py vulnerable_app.py
 ```
 
+### Demostración del rechazo del push
+
+`scripts/demo_pre_receive.py` crea un servidor Git local (un repositorio "desnudo" con `verifier/pre_receive.py` instalado como hook) y un clon de trabajo. Intenta subir un commit hecho con `--no-verify`, que el servidor rechaza, y uno que pasó por el análisis, que el servidor acepta:
+
+```bash
+python scripts/demo_pre_receive.py
+```
+
+Para instalarlo en un servidor Git propio, el archivo `hooks/pre-receive` del repositorio en el servidor ejecuta el verificador con la llave pública:
+
+```sh
+#!/bin/sh
+exec python3 /opt/appsec/verifier/pre_receive.py --llave /opt/appsec/receipt_public.pem
+```
+
+El servidor necesita una copia de `verifier/` y las dependencias de `requirements-verifier.txt`.
+
 ### Verificar recibos localmente
 
 ```bash
@@ -450,6 +475,20 @@ El mensaje de usuario envuelve los cambios en una etiqueta con una marca aleator
 
 ## 5. Análisis de los resultados
 
+### Capturas
+
+Salida real del hook, generada con análisis de Claude sobre los archivos de `examples/`:
+
+![Commit rechazado: vulnerable_app.py](docs/rechazo-vulnerable.svg)
+
+![Commit aprobado: secure_app.py](docs/aprobado-seguro.svg)
+
+![Intento de prompt injection](docs/rechazo-manipulacion.svg)
+
+Servidor Git con `verifier/pre_receive.py`, salida de `scripts/demo_pre_receive.py`:
+
+![Servidor Git con hook pre-receive](docs/pre-receive.svg)
+
 ### Ejemplos
 
 Resultados de `scripts/demo.py` con el prompt v3:
@@ -508,9 +547,20 @@ Durante el desarrollo se probó un archivo real de autenticación de 760 líneas
 | [PR #1](https://github.com/sirnaranjo/appsec-genai-challenge/pull/1) con un commit hecho con `--no-verify` | Verificación fallida: el commit no tiene recibo. Merge bloqueado |
 | Commit en el mismo PR que modifica el verificador para que siempre apruebe | La verificación siguió fallando: se ejecutó la versión de `main` |
 
+### Rechazo del push con `pre-receive`
+
+| Prueba | Resultado |
+|---|---|
+| Push de un commit hecho con `--no-verify` | Rechazado por el servidor. La rama remota no cambió |
+| Push de un commit analizado y aprobado | Aceptado |
+| Push con un commit válido y otro sin recibo | Rechazado completo |
+| Rama nueva con un commit sin recibo | Rechazada |
+| Push que agrega un archivo al `exclude` y no lo envía al análisis | Rechazado: el servidor usa su propia configuración |
+| Borrado de una rama | Aceptado: no agrega código |
+
 ### Pruebas automáticas
 
-- 147 pruebas sin costo: contrato de la API, autenticación, Device Flow, armado del prompt, pre-filtro (incluidos los 16 ataques y una prueba que comprueba que el código del proyecto no dispara el pre-filtro), presentación, recolección de cambios en Git, firma de recibos y ataques al recibo en repositorios temporales (sin recibo, copiado, alterado, firmado con otra llave, algoritmo `none`, lavado con `--amend`, diffs falsos, archivos omitidos y merges).
+- 153 pruebas sin costo: contrato de la API, autenticación, Device Flow, armado del prompt, pre-filtro (incluidos los 16 ataques y una prueba que comprueba que el código del proyecto no dispara el pre-filtro), presentación, recolección de cambios en Git, firma de recibos, ataques al recibo en repositorios temporales (sin recibo, copiado, alterado, firmado con otra llave, algoritmo `none`, lavado con `--amend`, diffs falsos, archivos omitidos y merges) y el hook `pre-receive` con un servidor Git local.
 - 19 pruebas con Claude: los tres ejemplos y los 16 ataques.
 
 ### Limitaciones conocidas
@@ -518,7 +568,7 @@ Durante el desarrollo se probó un archivo real de autenticación de 760 líneas
 - **Contexto**: el LLM solo ve los cambios del commit. Los flujos de datos entre archivos pueden producir falsos positivos o negativos.
 - **No determinismo**: el mismo código puede producir resultados distintos entre ejecuciones. El umbral de severidad y las advertencias reducen el impacto.
 - **El recibo certifica el proceso, no la ausencia de vulnerabilidades**: si el análisis no detecta algo, el recibo dirá aprobado.
-- **El código sin analizar puede llegar a ramas no protegidas** de GitHub. Las protecciones impiden que entre a `main`. Rechazar el push requiere un servidor Git con hooks `pre-receive`.
+- **El código sin analizar puede llegar a ramas no protegidas** de GitHub. Las protecciones impiden que entre a `main`. Rechazar el push requiere un servidor Git que admita hooks, con `verifier/pre_receive.py`.
 - **`--amend` honesto**: también se marca como no verificable. Se corrige con `git reset --soft HEAD~1` y un nuevo commit.
 - **Contribuciones externas**: todo commit necesita un recibo de este servidor, así que el repositorio no acepta contribuciones de quien no tenga acceso. Es lo esperado en un repositorio corporativo.
 - **Administrador del repositorio**: puede desactivar las reglas. Se mitiga separando la administración de seguridad del desarrollo.
@@ -544,8 +594,11 @@ Durante el desarrollo se probó un archivo real de autenticación de 760 líneas
 | `server/autenticacion.py` | Validación del token y autorización |
 | `server/recibos.py`, `server/registro.py` | Firma de recibos y registro de auditoría |
 | `server/config/prompts/` | Prompts versionados |
-| `verifier/` | Verificador de recibos |
+| `verifier/recibos.py`, `verifier/verificar.py` | Verificador de recibos |
+| `verifier/pre_receive.py` | Hook `pre-receive` para servidores Git propios |
 | `.github/workflows/integridad.yml` | Verificación en GitHub Actions |
 | `examples/` | Ejemplos vulnerable, seguro y con prompt injection |
-| `scripts/demo.py`, `scripts/generar_llaves.py` | Demostración y generación de llaves |
+| `scripts/demo.py`, `scripts/demo_pre_receive.py` | Demostraciones del hook y del rechazo del push |
+| `scripts/generar_llaves.py` | Generación de las llaves de firma |
+| `docs/` | Capturas de la salida real |
 | `tests/` | Pruebas automáticas y corpus de ataques |
