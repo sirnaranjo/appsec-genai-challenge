@@ -1,4 +1,12 @@
-"""Hook de pre-commit: envía los cambios en staging al servidor de análisis de seguridad."""
+"""Hook de pre-commit: envía los cambios en staging al servidor de análisis de seguridad.
+
+Flujo:
+1. Comprueba que haya una sesión iniciada (token OAuth guardado con hooks/login.py).
+2. Arma el paquete con los diffs en staging y las huellas del contenido (tree del commit y de su padre).
+3. Lo envía al servidor, que valida la identidad, analiza con el LLM y decide si se aprueba.
+4. Muestra el resultado. Si se aprueba, guarda el recibo firmado para el hook commit-msg.
+Cualquier falla (sin sesión, cambio demasiado grande, servidor caído) rechaza el commit.
+"""
 
 import sys
 
@@ -12,6 +20,8 @@ MAX_BYTES_TOTAL = 500_000
 
 
 def construir_paquete(rutas):
+    # tree_hash identifica el contenido exacto del commit antes de que exista; el servidor lo
+    # incluye en el recibo y el verificador lo compara con el commit que llega al repositorio
     return {
         "tree_hash": git_cambios.tree_hash(),
         **git_cambios.metadatos(),
@@ -20,6 +30,7 @@ def construir_paquete(rutas):
 
 
 def validar_tamano(paquete):
+    # El servidor vuelve a validar estos límites; aquí solo se avisa antes de enviar
     errores = []
     total = 0
     for archivo in paquete["archivos"]:
@@ -60,6 +71,8 @@ def main(rutas):
         presentacion.mostrar_error(f"Commit rechazado: {error}")
         return 1
 
+    # La decisión la toma el servidor según la severidad de los hallazgos; el cliente solo la aplica.
+    # El texto que viene del LLM se limpia antes de mostrarlo (ver presentacion.py)
     presentacion.mostrar_resultado(resultado)
     if not resultado["aprobado"]:
         return 1
