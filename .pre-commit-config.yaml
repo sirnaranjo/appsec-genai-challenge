@@ -7,5 +7,7 @@ repos:
         language: python
         additional_dependencies: [httpx==0.28.1, python-dotenv==1.2.4, rich==15.0.0]
         types_or: [python, javascript, jsx, ts, tsx, java, go, php, ruby, html]
+        # Ejemplos intencionalmente vulnerables; se demuestran con scripts/demo.py
+        exclude: ^examples/
         require_serial: true
         verbose: true

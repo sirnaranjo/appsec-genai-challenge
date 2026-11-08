@@ -48,7 +48,7 @@ def panel_hallazgo(hallazgo, es_bloqueante):
         partes += [
             Text(),
             Text("Código sugerido:", style="bold"),
-            Syntax(hallazgo["codigo_sugerido"], lexer, theme="ansi_dark", background_color="default"),
+            Syntax(hallazgo["codigo_sugerido"], lexer, theme="ansi_dark", background_color="default", word_wrap=True),
         ]
 
     if es_bloqueante:

@@ -1,5 +1,6 @@
 """Análisis de seguridad de los cambios usando un LLM (Claude)."""
 
+import functools
 import html
 import logging
 import secrets
@@ -32,9 +33,11 @@ def cargar_prompt():
 PROMPT = cargar_prompt()
 VERSION_PROMPT = PROMPT["version"]
 
-# Un análisis grande puede tardar; cortarlo antes obliga a repetirlo desde cero.
-# Timeout y reintento suman menos que el timeout del cliente (200 s)
-cliente = anthropic.Anthropic(timeout=90.0, max_retries=1)
+@functools.cache
+def cliente():
+    # Un análisis grande puede tardar; cortarlo antes obliga a repetirlo desde cero.
+    # Timeout y reintento suman menos que el timeout del cliente (200 s)
+    return anthropic.Anthropic(timeout=90.0, max_retries=1)
 
 
 def armar_cambios(solicitud):
@@ -56,7 +59,7 @@ def armar_mensaje(solicitud):
 def analizar(solicitud: SolicitudAnalisis) -> list[Hallazgo]:
     inicio = time.monotonic()
     try:
-        respuesta = cliente.beta.messages.parse(
+        respuesta = cliente().beta.messages.parse(
             model=ajustes.ANTHROPIC_MODEL,
             max_tokens=16000,
             # El prompt de sistema es igual en todas las solicitudes y se guarda en caché
