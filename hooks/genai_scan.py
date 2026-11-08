@@ -30,20 +30,30 @@ def validar_tamano(paquete):
     return errores
 
 
+def mostrar_hallazgo(hallazgo):
+    print()
+    print(f"[{hallazgo['severidad']}] {hallazgo['titulo']} ({hallazgo['owasp']})")
+    print(f"  Archivo: {hallazgo['archivo']}" + (f", línea {hallazgo['linea']}" if hallazgo["linea"] else ""))
+    print(f"  Riesgo: {hallazgo['riesgo']}")
+    print(f"  Solución: {hallazgo['solucion']}")
+    if hallazgo["codigo_sugerido"]:
+        print("  Código sugerido:")
+        for linea in hallazgo["codigo_sugerido"].splitlines():
+            print(f"    {linea}")
+
+
 def mostrar_resultado(resultado):
-    if resultado["aprobado"]:
+    hallazgos = resultado["hallazgos"]
+    if resultado["aprobado"] and not hallazgos:
         print(f"Análisis aprobado. Id: {resultado['id_analisis']}")
         return
 
-    print(f"Commit rechazado. Vulnerabilidades encontradas: {len(resultado['hallazgos'])}")
-    for hallazgo in resultado["hallazgos"]:
-        print()
-        print(f"[{hallazgo['severidad']}] {hallazgo['titulo']} ({hallazgo['owasp']})")
-        print(f"  Archivo: {hallazgo['archivo']}" + (f", línea {hallazgo['linea']}" if hallazgo["linea"] else ""))
-        print(f"  Riesgo: {hallazgo['riesgo']}")
-        print(f"  Solución: {hallazgo['solucion']}")
-        if hallazgo["codigo_sugerido"]:
-            print(f"  Código sugerido: {hallazgo['codigo_sugerido']}")
+    if resultado["aprobado"]:
+        print(f"Análisis aprobado con advertencias: {len(hallazgos)}")
+    else:
+        print(f"Commit rechazado. Vulnerabilidades encontradas: {len(hallazgos)}")
+    for hallazgo in hallazgos:
+        mostrar_hallazgo(hallazgo)
     print()
     print(f"Id del análisis: {resultado['id_analisis']}")
 

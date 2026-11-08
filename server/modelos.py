@@ -48,4 +48,6 @@ class Hallazgo(BaseModel):
 class ResultadoAnalisis(BaseModel):
     id_analisis: str
     aprobado: bool
+    modelo: str
+    version_prompt: str
     hallazgos: list[Hallazgo]
