@@ -3,6 +3,7 @@
 import functools
 import html
 import logging
+import re
 import secrets
 import time
 
@@ -10,10 +11,11 @@ import anthropic
 import yaml
 from pydantic import BaseModel
 
-from server import ajustes
+from server import ajustes, prefiltro
 from server.modelos import Hallazgo, SolicitudAnalisis
 
 log = logging.getLogger("appsec")
+PATRON_VARIABLE = re.compile(r"\{\{(MARCA|SENALES|CAMBIOS)\}\}")
 
 
 class RespuestaModelo(BaseModel):
@@ -33,6 +35,7 @@ def cargar_prompt():
 PROMPT = cargar_prompt()
 VERSION_PROMPT = PROMPT["version"]
 
+
 @functools.cache
 def cliente():
     # Un análisis grande puede tardar; cortarlo antes obliga a repetirlo desde cero.
@@ -48,15 +51,52 @@ def armar_cambios(solicitud):
     return "\n".join(bloques)
 
 
-def armar_mensaje(solicitud):
-    # Marca aleatoria por solicitud: el código analizado no puede adivinarla para cerrar la etiqueta
-    marca = secrets.token_hex(8)
-    mensaje = PROMPT["usuario"].replace("{{MARCA}}", marca)
-    # Los cambios se insertan al final para que su contenido no se trate como plantilla
-    return mensaje.replace("{{CAMBIOS}}", armar_cambios(solicitud))
+def armar_senales(senales):
+    # Solo archivo, línea y tipo de patrón: nunca se copia código del commit fuera de la etiqueta de cambios
+    if not senales:
+        return "Ninguna"
+    return "\n".join(
+        f"- archivo {html.escape(senal.archivo, quote=True)}, línea {senal.linea}: {senal.descripcion} ({senal.owasp})"
+        for senal in senales
+    )
+
+
+def armar_mensaje(solicitud, senales=()):
+    valores = {
+        # Marca aleatoria por solicitud: el código analizado no puede adivinarla para cerrar la etiqueta
+        "MARCA": secrets.token_hex(8),
+        "SENALES": armar_senales(senales),
+        "CAMBIOS": armar_cambios(solicitud),
+    }
+    # Reemplazo en una sola pasada: un texto insertado nunca se vuelve a tratar como plantilla
+    return PATRON_VARIABLE.sub(lambda variable: valores[variable.group(1)], PROMPT["usuario"])
 
 
 def analizar(solicitud: SolicitudAnalisis) -> list[Hallazgo]:
+    # Capa determinística: no depende de que el LLM resista la manipulación
+    manipulacion = prefiltro.detectar_manipulacion(solicitud.archivos)
+    senales = prefiltro.detectar_senales(solicitud.archivos)
+
+    hallazgos = consultar_modelo(solicitud, senales)
+
+    # El intento de manipulación se reporta aunque el LLM no lo haya detectado. Los caracteres
+    # invisibles se conservan siempre: son evidencia concreta que el LLM puede no mencionar
+    reportados = {h.archivo for h in hallazgos if h.owasp == prefiltro.MANIPULACION}
+    hallazgos += [
+        h for h in manipulacion if h.archivo not in reportados or h.titulo == prefiltro.TITULO_INVISIBLES
+    ]
+    advertencias = prefiltro.contradicciones(senales, hallazgos)
+
+    log.info(
+        "prefiltro manipulacion=%d senales=%d contradicciones=%d",
+        len(manipulacion),
+        len(senales),
+        len(advertencias),
+    )
+    return hallazgos + advertencias
+
+
+def consultar_modelo(solicitud, senales):
     inicio = time.monotonic()
     try:
         respuesta = cliente().beta.messages.parse(
@@ -64,7 +104,7 @@ def analizar(solicitud: SolicitudAnalisis) -> list[Hallazgo]:
             max_tokens=16000,
             # El prompt de sistema es igual en todas las solicitudes y se guarda en caché
             system=[{"type": "text", "text": PROMPT["sistema"], "cache_control": {"type": "ephemeral"}}],
-            messages=[{"role": "user", "content": armar_mensaje(solicitud)}],
+            messages=[{"role": "user", "content": armar_mensaje(solicitud, senales)}],
             # La respuesta debe cumplir el esquema; no se acepta texto libre
             output_format=RespuestaModelo,
             output_config={"effort": ajustes.ANTHROPIC_EFFORT},
