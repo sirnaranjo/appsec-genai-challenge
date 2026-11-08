@@ -62,14 +62,18 @@ def cargar_llave_publica(pem):
 
 
 def filtros_del_hook(ruta_config):
+    return filtros_desde_texto(ruta_config.read_text(encoding="utf-8"))
+
+
+def filtros_desde_texto(texto):
     # Los mismos tipos de archivo y exclusiones que usa el hook, leídos de una configuración confiable
-    configuracion = yaml.safe_load(ruta_config.read_text(encoding="utf-8"))
+    configuracion = yaml.safe_load(texto)
     for repo in configuracion["repos"]:
         for hook in repo["hooks"]:
             if hook["id"] == ID_HOOK:
                 exclude = hook.get("exclude")
                 return set(hook.get("types_or", [])), re.compile(exclude) if exclude else None
-    raise ValueError(f"No se encontró el hook {ID_HOOK} en {ruta_config}")
+    raise ValueError(f"No se encontró el hook {ID_HOOK} en la configuración de pre-commit")
 
 
 def decodificar(parte):
