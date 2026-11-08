@@ -31,9 +31,14 @@ def test_rechaza_campos_desconocidos():
         SolicitudAnalisis(**datos_solicitud(aprobado=True))
 
 
-def test_rechaza_solicitud_sin_archivos():
+def test_acepta_solicitud_sin_archivos():
+    # Un commit que no cambia código igual necesita su recibo
+    SolicitudAnalisis(**datos_solicitud(archivos=[]))
+
+
+def test_rechaza_tree_base_invalido():
     with pytest.raises(ValidationError):
-        SolicitudAnalisis(**datos_solicitud(archivos=[]))
+        SolicitudAnalisis(**datos_solicitud(tree_base="abc"))
 
 
 def test_rechaza_tipo_de_archivo_desconocido():

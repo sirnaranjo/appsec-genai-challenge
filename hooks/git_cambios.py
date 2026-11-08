@@ -1,6 +1,7 @@
 """Obtiene desde git la información de los cambios que van a entrar en el commit."""
 
 import subprocess
+from pathlib import Path
 
 LINEAS_CONTEXTO = 10
 
@@ -41,10 +42,17 @@ def cambio_de_archivo(ruta):
 
 
 def metadatos():
-    # Datos informativos: el autor de git no autentica a nadie
     return {
+        # Tree del padre: los diffs se calculan contra él y el verificador comprueba que coincida
+        "tree_base": git_opcional("rev-parse", "--verify", "HEAD^{tree}"),
+        # Datos informativos: el autor de git no autentica a nadie
         "rama": git_opcional("symbolic-ref", "--short", "HEAD"),
         "commit_padre": git_opcional("rev-parse", "--verify", "HEAD"),
         "repositorio": git_opcional("remote", "get-url", "origin"),
         "autor_git": git_opcional("config", "user.email"),
     }
+
+
+def ruta_recibo_pendiente():
+    # Archivo dentro de .git donde el recibo espera hasta que el hook commit-msg lo agrega al mensaje
+    return Path(git("rev-parse", "--git-path", "appsec-recibo").strip())

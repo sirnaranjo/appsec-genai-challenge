@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 MAX_CARACTERES_ARCHIVO = 100_000
 MAX_CARACTERES_TOTAL = 500_000
+PATRON_HASH = r"^([0-9a-f]{40}|[0-9a-f]{64})$"
 
 
 class Archivo(BaseModel):
@@ -18,12 +19,15 @@ class SolicitudAnalisis(BaseModel):
     # Se rechazan campos desconocidos
     model_config = ConfigDict(extra="forbid")
 
-    tree_hash: str = Field(pattern=r"^([0-9a-f]{40}|[0-9a-f]{64})$")
+    tree_hash: str = Field(pattern=PATRON_HASH)
+    # None solo en el primer commit del repositorio, que no tiene padre
+    tree_base: str | None = Field(default=None, pattern=PATRON_HASH)
     rama: str | None = None
     commit_padre: str | None = None
     repositorio: str | None = None
     autor_git: str | None = None
-    archivos: list[Archivo] = Field(min_length=1, max_length=200)
+    # Puede venir vacía si el commit no cambia código: igual se emite el recibo del commit
+    archivos: list[Archivo] = Field(max_length=200)
 
     # Los límites del cliente se validan de nuevo: el servidor no confía en el cliente
     @model_validator(mode="after")
@@ -53,3 +57,5 @@ class ResultadoAnalisis(BaseModel):
     version_prompt: str
     severidad_bloqueo: str
     hallazgos: list[Hallazgo]
+    # Solo se emite si el análisis fue aprobado
+    recibo: str | None = None

@@ -33,9 +33,11 @@ def validar_tamano(paquete):
 
 
 def main(rutas):
-    if not rutas:
-        return 0
+    # Un recibo de un intento anterior nunca debe llegar a este commit
+    pendiente = git_cambios.ruta_recibo_pendiente()
+    pendiente.unlink(missing_ok=True)
 
+    # El hook corre en todos los commits, aunque no cambien código, porque todos necesitan recibo.
     # El hook no puede pedir el login porque pre-commit captura la salida; se hace con login.py
     token = autenticacion.token_guardado()
     if not token:
@@ -59,7 +61,12 @@ def main(rutas):
         return 1
 
     presentacion.mostrar_resultado(resultado)
-    return 0 if resultado["aprobado"] else 1
+    if not resultado["aprobado"]:
+        return 1
+
+    # El hook commit-msg lo agrega al mensaje del commit
+    pendiente.write_text(resultado["recibo"], encoding="utf-8")
+    return 0
 
 
 if __name__ == "__main__":
