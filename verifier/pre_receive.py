@@ -21,12 +21,45 @@ from recibos import ReciboInvalido, cargar_llave_publica, filtros_desde_texto, g
 
 SIN_COMMIT = re.compile(r"^0+$")
 
+# Causa probable de cada error del verificador, para quien recibe el rechazo
+CAUSAS = (
+    ("no tiene recibo", "El commit no pasó por el análisis de seguridad: se hizo con --no-verify, sin los hooks "
+                        "instalados o con rebase, cherry-pick o squash."),
+    ("pertenece a", "El recibo es de otra persona. Cada commit nuevo lo debe subir quien lo analizó."),
+    ("no fue aprobado", "El análisis encontró vulnerabilidades en este código."),
+    ("no se analizaron", "Hay archivos de código que quedaron fuera del análisis."),
+    ("no indica qué archivos", "Hay archivos de código que quedaron fuera del análisis."),
+    ("no coincide", "El código cambió después del análisis."),
+    ("no es el que se analizó", "El código cambió después del análisis."),
+    ("contra el padre", "El commit se modificó con --amend o se movió con rebase después del análisis."),
+)
+CAUSA_RECIBO_ALTERADO = "El recibo fue modificado o no lo emitió el servidor de análisis de este repositorio."
 
-def commits_nuevos(anterior, nuevo):
+CORRECCION = """\
+Ninguna rama se actualizó. Para corregirlo, rehacer los commits rechazados pasando por el análisis.
+Si es solo el último commit:
+    git reset --soft HEAD~1
+    git commit -m "mensaje"
+Y volver a hacer el push."""
+
+
+def causa(error):
+    texto = str(error)
+    return next((descripcion for clave, descripcion in CAUSAS if clave in texto), CAUSA_RECIBO_ALTERADO)
+
+
+def commits_que_entran(anterior, nuevo):
+    # Todos los commits que se incorporan a la rama, aunque ya existan en otra referencia del servidor:
+    # por ejemplo los de un pull request desde un fork, que llegan sin pasar por este hook
     if SIN_COMMIT.match(anterior):
-        # Rama nueva: los commits que todavía no son alcanzables desde ninguna rama del servidor
-        return git("rev-list", "--reverse", nuevo, "--not", "--all").split()
+        return git("rev-list", "--reverse", nuevo, "--not", "--branches").split()
     return git("rev-list", "--reverse", f"{anterior}..{nuevo}").split()
+
+
+def commits_nunca_vistos(nuevo):
+    # Los que el servidor recibe por primera vez. Solo a estos se les exige que el recibo sea de quien hace
+    # el push: los demás ya llegaron por otra vía, como la rama de un PR que otra persona integra
+    return set(git("rev-list", nuevo, "--not", "--all").split())
 
 
 def filtros_confiables():
@@ -46,25 +79,35 @@ def main():
     # Cada servidor expone de forma distinta quién hace el push (por ejemplo GITEA_PUSHER_NAME o GL_USERNAME)
     usuario = os.environ.get(argumentos.usuario_desde) if argumentos.usuario_desde else None
 
-    fallidos = 0
+    fallidos = []
     for linea in sys.stdin.read().splitlines():
         anterior, nuevo, rama = linea.split()
         # Borrar una rama no agrega código
         if SIN_COMMIT.match(nuevo):
             continue
-        for sha in commits_nuevos(anterior, nuevo):
+        nunca_vistos = commits_nunca_vistos(nuevo)
+        for sha in commits_que_entran(anterior, nuevo):
             asunto = git("log", "-1", "--format=%s", sha).strip()[:60]
             try:
-                datos = verificar_commit(sha, llave, filtros, usuario)
+                datos = verificar_commit(sha, llave, filtros, usuario if sha in nunca_vistos else None)
                 print(f"OK     {sha[:8]}  {datos['sub']:<16} {asunto}")
             except ReciboInvalido as error:
-                fallidos += 1
+                fallidos.append((sha, asunto, error))
                 print(f"FALLA  {sha[:8]}  {error}  ({asunto})")
 
-    if fallidos:
-        print(f"Push rechazado: {fallidos} commit(s) sin un recibo de integridad válido.")
-        return 1
-    return 0
+    if not fallidos:
+        return 0
+    print()
+    print(f"PUSH RECHAZADO por el control de seguridad: {len(fallidos)} commit(s) sin un recibo de análisis válido.")
+    for sha, asunto, error in fallidos:
+        print()
+        print(f"  Commit:  {sha[:8]}  {asunto}")
+        print(f"  Motivo:  {error}")
+        print(f"  Causa:   {causa(error)}")
+    print()
+    print(CORRECCION)
+    print()
+    return 1
 
 
 if __name__ == "__main__":

@@ -1,0 +1,44 @@
+services:
+  analizador:
+    build:
+      context: .
+      dockerfile: despliegue/analizador/Dockerfile
+    container_name: appsec-analizador
+    env_file: .env
+    environment:
+      - RECEIPT_PRIVATE_KEY_PATH=/llaves/receipt_private.pem
+      - DATABASE_PATH=/datos/appsec.db
+    ports:
+      # 8001 en el equipo: así puede convivir con un servidor de análisis local en el 8000
+      - "8001:8000"
+    volumes:
+      # La llave privada solo existe en este contenedor
+      - ./keys/receipt_private.pem:/llaves/receipt_private.pem:ro
+      - analizador-datos:/datos
+
+  gitea:
+    build: ./despliegue/gitea
+    container_name: appsec-gitea
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - GITEA__database__DB_TYPE=sqlite3
+      - GITEA__security__INSTALL_LOCK=true
+      - GITEA__server__ROOT_URL=http://localhost:3000/
+      - GITEA__server__DOMAIN=localhost
+      # Las cuentas solo se crean iniciando sesión con GitHub, con el mismo nombre de usuario
+      - GITEA__service__DISABLE_REGISTRATION=false
+      - GITEA__service__ALLOW_ONLY_EXTERNAL_REGISTRATION=true
+      - GITEA__oauth2_client__ENABLE_AUTO_REGISTRATION=true
+      - GITEA__oauth2_client__USERNAME=nickname
+    ports:
+      - "3000:3000"
+    volumes:
+      - gitea-datos:/data
+      # Gitea solo recibe el verificador y la llave pública, de solo lectura
+      - ./verifier:/appsec/verifier:ro
+      - ./keys/receipt_public.pem:/appsec/receipt_public.pem:ro
+
+volumes:
+  analizador-datos:
+  gitea-datos:

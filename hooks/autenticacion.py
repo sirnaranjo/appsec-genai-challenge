@@ -6,7 +6,7 @@ import httpx
 import keyring
 import keyring.errors
 
-SERVICIO_KEYRING = "appsec-genai-challenge"
+SERVICIO_KEYRING = "appsec-genai-gitea"
 CUENTA_KEYRING = "github"
 
 URL_CODIGO = "https://github.com/login/device/code"

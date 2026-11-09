@@ -1,5 +1,6 @@
 """Hook pre-receive en un servidor Git local: el push se rechaza antes de que el código llegue al remoto."""
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -42,15 +43,17 @@ def servidor(tmp_path, monkeypatch, llave_publica):
     hook.write_text(
         "#!/bin/sh\n"
         f'exec "{Path(sys.executable).as_posix()}" "{(RAIZ / "verifier" / "pre_receive.py").as_posix()}" '
-        f'--llave "{llave.as_posix()}"\n',
+        f'--llave "{llave.as_posix()}" --usuario-desde APPSEC_PUSHER\n',
         newline="\n",
     )
     hook.chmod(0o755)
     return remoto
 
 
-def push(*refs):
-    return git("push", "origin", *refs, verificar=False)
+def push(*refs, usuario="dev"):
+    # En un servidor local el hook hereda el entorno del push: así se simula el usuario autenticado
+    entorno = {**os.environ, "APPSEC_PUSHER": usuario}
+    return subprocess.run(["git", "push", "origin", *refs], capture_output=True, text=True, env=entorno)
 
 
 def rama_en_servidor(remoto, rama="main"):
@@ -66,6 +69,10 @@ def test_push_sin_recibo_se_rechaza(servidor):
     assert resultado.returncode != 0
     assert "no tiene recibo" in resultado.stderr
     assert "pre-receive hook declined" in resultado.stderr
+    # El rechazo explica la causa y cómo corregirlo
+    assert "PUSH RECHAZADO" in resultado.stderr
+    assert "--no-verify" in resultado.stderr
+    assert "git reset --soft HEAD~1" in resultado.stderr
     # El código nunca llegó al servidor
     assert rama_en_servidor(servidor) == antes
 
@@ -116,3 +123,47 @@ def test_el_push_no_puede_agregar_exclusiones_propias(servidor):
     resultado = push("main")
     assert resultado.returncode != 0
     assert "no se analizaron: malo.py" in resultado.stderr
+
+
+def test_recibo_de_otra_persona_se_rechaza_en_el_push(servidor):
+    commit_con_recibo(Path.cwd(), "bueno.py", "x = 1\n")
+    resultado = push("main", usuario="otro")
+    assert resultado.returncode != 0
+    assert "pertenece a dev y no a otro" in resultado.stderr
+    assert "Cada commit nuevo lo debe subir" in resultado.stderr
+
+
+@pytest.mark.parametrize("mensaje, esperado", [
+    ("el análisis no fue aprobado", "encontró vulnerabilidades"),
+    ("hay archivos de código que no se analizaron: a.py", "fuera del análisis"),
+    ("el contenido del commit no es el que se analizó", "cambió después"),
+    ("el análisis no se calculó contra el padre de este commit", "--amend"),
+    ("la firma del recibo no es válida", "fue modificado"),
+])
+def test_cada_motivo_tiene_una_causa_explicada(mensaje, esperado):
+    from pre_receive import causa
+    assert esperado in causa(mensaje)
+
+
+def test_otra_persona_puede_integrar_una_rama_ya_verificada(servidor):
+    git("checkout", "-q", "-b", "rama")
+    commit_con_recibo(Path.cwd(), "bueno.py", "x = 1\n")
+    assert push("rama").returncode == 0
+    git("checkout", "-q", "main")
+    git("merge", "-q", "--no-ff", "--no-verify", "-m", "Merge rama", "rama")
+    resultado = push("main", usuario="otro")
+    assert resultado.returncode == 0, resultado.stderr
+
+
+def test_commit_que_llego_sin_pasar_por_el_hook_no_entra_a_main(servidor):
+    # Como el de un fork: el servidor copia sus commits a refs/pull/N/head sin ejecutar este hook
+    git("checkout", "-q", "-b", "fork")
+    Path("fork.py").write_text("import os\nos.system(input())\n")
+    git("add", "fork.py")
+    git("commit", "-q", "--no-verify", "-m", "Desde un fork")
+    git("fetch", "-q", str(Path.cwd()), "fork:refs/pull/1/head", carpeta=servidor)
+    git("checkout", "-q", "main")
+    git("merge", "-q", "--no-ff", "--no-verify", "-m", "Merge pull request 1", "fork")
+    resultado = push("main")
+    assert resultado.returncode != 0
+    assert "no tiene recibo" in resultado.stderr
