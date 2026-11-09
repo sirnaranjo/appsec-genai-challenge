@@ -26,8 +26,10 @@ def git(carpeta, *args, salida=False):
 
 def preparar_servidor(carpeta):
     servidor = carpeta / "servidor.git"
+    # --bare: repositorio sin carpeta de trabajo, como el de un servidor
     git(carpeta, "clone", "-q", "--bare", str(RAIZ), str(servidor))
-    # Git ejecuta los hooks con sh, también en Windows: se usan rutas con barras normales
+    # Git ejecuta los hooks con sh, también en Windows: se usan rutas con barras normales.
+    # Sin --usuario-desde: en la demostración no hay usuarios autenticados
     hook = servidor / "hooks" / "pre-receive"
     hook.write_text(
         "#!/bin/sh\n"

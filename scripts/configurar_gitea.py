@@ -43,6 +43,7 @@ SERVICIO_KEYRING = "appsec-genai-gitea-administrador"
 ALMACEN = "almacén de credenciales del sistema"
 # Solo si el sistema no tiene almacén de credenciales, como un servidor Linux sin escritorio
 ARCHIVO_CLAVE = RAIZ / "data" / "gitea-administrador.txt"
+# Longitud mínima de una contraseña escrita por quien instala
 CLAVE_MINIMA = 12
 # Definen qué se analiza y cómo se verifica: en main no se cambian con un push ni con el merge de un desarrollador.
 # Por ejemplo, agregar una ruta al exclude y luego subir código vulnerable en ella
@@ -82,6 +83,7 @@ def crear_usuario_local(nombre, clave, administrador=False):
 
 
 def guardar_clave(clave):
+    # Devuelve dónde quedó guardada. La cuenta en el almacén es la URL de Gitea: cada instalación tiene la suya
     try:
         keyring.set_password(SERVICIO_KEYRING, GITEA, clave)
         return ALMACEN
@@ -94,6 +96,7 @@ def guardar_clave(clave):
 
 
 def leer_clave():
+    # None si no hay una guardada: es la primera instalación o se perdió
     try:
         clave = keyring.get_password(SERVICIO_KEYRING, GITEA)
     except KeyringError:
@@ -132,6 +135,7 @@ def pedir_clave():
 
 def credenciales_administrador():
     clave = leer_clave()
+    # Sin clave guardada: se crea el administrador, o se le asigna la nueva si ya existía
     if clave is None:
         clave = pedir_clave()
         crear_usuario_local(ADMINISTRADOR, clave, administrador=True)
@@ -140,6 +144,7 @@ def credenciales_administrador():
 
 
 def configurar_login_github():
+    # Fuente de autenticación de Gitea con la misma OAuth App que usa el análisis
     client_id = os.environ.get("GITHUB_OAUTH_CLIENT_ID")
     client_secret = os.environ.get("GITHUB_OAUTH_CLIENT_SECRET")
     if not client_id or not client_secret:
@@ -155,6 +160,7 @@ def configurar_login_github():
 
 def crear_si_no_existe(cliente, ruta, datos):
     respuesta = cliente.post(ruta, json=datos)
+    # 201: creado; 409 o 422: ya existía. Cualquier otro código es un error
     if respuesta.status_code not in (201, 409, 422):
         respuesta.raise_for_status()
     return respuesta
@@ -167,6 +173,7 @@ def id_equipo(cliente):
 
 def crear_repositorio(cliente, nombre=REPOSITORIO):
     crear_si_no_existe(cliente, "/orgs", {"username": ORGANIZACION, "visibility": "public"})
+    # Equipo con escritura en todos los repositorios de la organización: código, pull requests e incidencias
     crear_si_no_existe(cliente, f"/orgs/{ORGANIZACION}/teams", {
         "name": EQUIPO, "permission": "write", "includes_all_repositories": True,
         "units": ["repo.code", "repo.pulls", "repo.issues"],
@@ -182,6 +189,7 @@ def crear_repositorio(cliente, nombre=REPOSITORIO):
 def proteger_main(cliente, nombre=REPOSITORIO):
     # Después del contenido inicial: Gitea no puede revisar los archivos protegidos en el primer push de una rama.
     # Sin force push ni borrado, y solo un administrador puede integrar un pull request que modifique esos archivos
+    # enable_push: quien tiene escritura puede hacer push a main, siempre pasando por el hook
     proteccion = {"enable_push": True, "protected_file_patterns": ";".join(ARCHIVOS_PROTEGIDOS)}
     ruta = f"/repos/{ORGANIZACION}/{nombre}/branch_protections"
     if any(existente["rule_name"] == "main" for existente in cliente.get(ruta).json()):
@@ -195,6 +203,7 @@ def subir_contenido_inicial(cliente, usuario, clave, nombre=REPOSITORIO, carpeta
     if not cliente.get(f"/repos/{ORGANIZACION}/{nombre}").json()["empty"]:
         return "el repositorio ya tenía contenido"
     destino = f"{GITEA}/{ORGANIZACION}/{nombre}.git"
+    # La rama actual de esta carpeta pasa a ser main en Gitea
     resultado = git("push", destino, "HEAD:refs/heads/main", carpeta=carpeta, credenciales=(usuario, clave))
     if resultado.returncode != 0:
         raise RuntimeError(resultado.stderr)
@@ -202,7 +211,9 @@ def subir_contenido_inicial(cliente, usuario, clave, nombre=REPOSITORIO, carpeta
 
 
 def instalar_hook(nombre=REPOSITORIO):
+    # Gitea ejecuta en cada push los scripts de pre-receive.d del repositorio
     carpeta = f"/data/git/repositories/{ORGANIZACION}/{nombre}.git/hooks/pre-receive.d"
+    # GITEA_PUSHER_NAME: usuario autenticado que hace el push
     hook = (
         "#!/bin/sh\n"
         "exec python3 /appsec/verifier/pre_receive.py --llave /appsec/receipt_public.pem --usuario-desde GITEA_PUSHER_NAME\n"
@@ -221,6 +232,7 @@ def configurar_espejo(cliente):
     existentes = cliente.get(f"/repos/{ORGANIZACION}/{REPOSITORIO}/push_mirrors").json()
     if any(espejo["remote_address"] == url for espejo in existentes):
         return "ya estaba configurado"
+    # Se replica en cada push aceptado (sync_on_commit) y, además, cada 8 horas
     cliente.post(f"/repos/{ORGANIZACION}/{REPOSITORIO}/push_mirrors", json={
         "remote_address": url, "remote_username": "oauth2", "remote_password": token,
         "interval": "8h0m0s", "sync_on_commit": True,
@@ -229,7 +241,9 @@ def configurar_espejo(cliente):
 
 
 def autorizar(cliente, login):
+    # Pertenecer al equipo da escritura en el repositorio
     respuesta = cliente.put(f"/teams/{id_equipo(cliente)}/members/{login}")
+    # 404: la cuenta aún no existe porque no ha iniciado sesión con GitHub
     if respuesta.status_code == 404:
         return f"{login} no existe en Gitea: primero debe iniciar sesión con GitHub en {GITEA}"
     respuesta.raise_for_status()

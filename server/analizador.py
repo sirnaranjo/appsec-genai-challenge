@@ -22,6 +22,7 @@ from server import ajustes, prefiltro
 from server.modelos import Hallazgo, SolicitudAnalisis
 
 log = logging.getLogger("appsec")
+# Variables de la plantilla del mensaje de usuario del prompt
 PATRON_VARIABLE = re.compile(r"\{\{(MARCA|SENALES|CAMBIOS)\}\}")
 
 
@@ -42,7 +43,9 @@ def cargar_prompt():
         return yaml.safe_load(archivo)
 
 
+# Secciones del archivo: version, sistema (instrucciones) y usuario (plantilla con los cambios)
 PROMPT = cargar_prompt()
+# Queda en cada recibo y en el registro: indica con qué criterio se aprobó
 VERSION_PROMPT = PROMPT["version"]
 
 
@@ -85,6 +88,7 @@ def armar_mensaje(solicitud, senales=()):
 
 def analizar(solicitud: SolicitudAnalisis) -> list[Hallazgo]:
     # Capa determinística: no depende de que el LLM resista la manipulación
+    # manipulacion: hallazgos que siempre bloquean; senales: patrones peligrosos que se le indican al LLM
     manipulacion = prefiltro.detectar_manipulacion(solicitud.archivos)
     senales = prefiltro.detectar_senales(solicitud.archivos)
 
@@ -96,6 +100,7 @@ def analizar(solicitud: SolicitudAnalisis) -> list[Hallazgo]:
     hallazgos += [
         h for h in manipulacion if h.archivo not in reportados or h.titulo == prefiltro.TITULO_INVISIBLES
     ]
+    # Señales de confianza alta que el LLM no reportó: se agregan como advertencias de severidad BAJA
     advertencias = prefiltro.contradicciones(senales, hallazgos)
 
     log.info(
@@ -112,6 +117,7 @@ def consultar_modelo(solicitud, senales):
     try:
         respuesta = cliente().beta.messages.parse(
             model=ajustes.ANTHROPIC_MODEL,
+            # Tope de la respuesta; si se alcanza, queda incompleta y el análisis se rechaza
             max_tokens=16000,
             # El prompt de sistema es igual en todas las solicitudes y se guarda en caché
             system=[{"type": "text", "text": PROMPT["sistema"], "cache_control": {"type": "ephemeral"}}],
@@ -128,6 +134,7 @@ def consultar_modelo(solicitud, senales):
         log.error("Error al llamar al modelo: %s", error)
         raise ErrorAnalisis("Error al llamar al modelo") from error
 
+    # Costo (tokens, incluidos los leídos de la caché) y duración de cada consulta
     log.info(
         "modelo=%s request=%s stop=%s tokens_entrada=%d cache_leido=%d tokens_salida=%d segundos=%.1f",
         respuesta.model,

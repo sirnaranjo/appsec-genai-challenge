@@ -19,6 +19,8 @@ def git(repo, *args, salida=False):
 
 
 def preparar_repositorio(repo):
+    # Repositorio nuevo con los hooks y la configuración de este proyecto. El primer commit se hace
+    # con --no-verify porque solo prepara la demostración
     git(repo, "init", "-q", "-b", "main")
     git(repo, "config", "user.name", "Demo")
     git(repo, "config", "user.email", "demo@example.com")

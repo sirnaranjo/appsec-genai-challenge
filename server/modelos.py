@@ -4,13 +4,16 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+# Límites por archivo y por commit: acotan el costo y la espera del análisis
 MAX_CARACTERES_ARCHIVO = 100_000
 MAX_CARACTERES_TOTAL = 500_000
+# Hash de Git: 40 caracteres (SHA-1) o 64 (SHA-256)
 PATRON_HASH = r"^([0-9a-f]{40}|[0-9a-f]{64})$"
 
 
 class Archivo(BaseModel):
     ruta: str = Field(min_length=1, max_length=500)
+    # diff: solo los cambios con contexto; completo: el archivo entero, cuando no hay cambios en staging
     tipo: Literal["diff", "completo"]
     contenido: str = Field(max_length=MAX_CARACTERES_ARCHIVO)
 
@@ -19,9 +22,11 @@ class SolicitudAnalisis(BaseModel):
     # Se rechazan campos desconocidos
     model_config = ConfigDict(extra="forbid")
 
+    # Hash del contenido completo que tendrá el commit (git write-tree)
     tree_hash: str = Field(pattern=PATRON_HASH)
-    # None solo en el primer commit del repositorio, que no tiene padre
+    # Hash del contenido del commit padre. None solo en el primer commit del repositorio
     tree_base: str | None = Field(default=None, pattern=PATRON_HASH)
+    # Datos informativos para el registro de auditoría; no influyen en la decisión
     rama: str | None = None
     commit_padre: str | None = None
     repositorio: str | None = None
@@ -38,10 +43,13 @@ class SolicitudAnalisis(BaseModel):
         return self
 
 
+# Formato de cada vulnerabilidad: lo deben cumplir la respuesta del LLM y el pre-filtro
 class Hallazgo(BaseModel):
+    # Categoría del OWASP Top 10 2021, o "Manipulacion del analisis"
     owasp: str
     titulo: str
     archivo: str
+    # None cuando no corresponde a una línea, por ejemplo si el problema está en el nombre del archivo
     linea: int | None = None
     severidad: Literal["BAJA", "MEDIA", "ALTA", "CRITICA"]
     riesgo: str

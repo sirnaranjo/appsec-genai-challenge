@@ -15,6 +15,7 @@ log = logging.getLogger("appsec")
 
 app = FastAPI(title="AppSec GenAI", version="0.4.0")
 
+# De menor a mayor: la posición en la lista permite compararlas
 SEVERIDADES = ["BAJA", "MEDIA", "ALTA", "CRITICA"]
 
 if not ajustes.USUARIOS_PERMITIDOS:
@@ -22,9 +23,11 @@ if not ajustes.USUARIOS_PERMITIDOS:
 
 
 def bloquea_commit(hallazgo):
+    # Bloquea si la severidad del hallazgo es igual o mayor que SEVERIDAD_BLOQUEO
     return SEVERIDADES.index(hallazgo.severidad) >= SEVERIDADES.index(ajustes.SEVERIDAD_BLOQUEO)
 
 
+# Comprobación de que el servidor está en línea
 @app.get("/health")
 def health():
     return {"estado": "ok"}
@@ -38,6 +41,7 @@ def auth_config():
     return {"client_id": ajustes.GITHUB_OAUTH_CLIENT_ID}
 
 
+# Usuario dueño del token; hooks/login.py lo usa para confirmar la sesión
 @app.get("/auth/me", response_model=Usuario)
 def auth_me(usuario: Usuario = Depends(usuario_autenticado)):
     return usuario
@@ -45,13 +49,16 @@ def auth_me(usuario: Usuario = Depends(usuario_autenticado)):
 
 @app.post("/analyze", response_model=ResultadoAnalisis)
 def analyze(solicitud: SolicitudAnalisis, usuario: Usuario = Depends(usuario_autenticado)):
+    # Identificador del análisis: aparece en el recibo, en el registro y en los mensajes de error
     id_analisis = str(uuid.uuid4())
     modelo = ajustes.ANTHROPIC_MODEL
     try:
         # Un commit sin archivos de código no necesita LLM, pero igual recibe su recibo
         hallazgos = analizar(solicitud) if solicitud.archivos else []
+        # Aprobado si ningún hallazgo alcanza la severidad de bloqueo; los demás quedan como advertencias
         aprobado = not any(bloquea_commit(hallazgo) for hallazgo in hallazgos)
         recibo = None
+        # Solo un análisis aprobado recibe recibo; len(hallazgos) es el número de advertencias
         if aprobado:
             recibo = recibos.emitir(solicitud, usuario, id_analisis, len(hallazgos), modelo, VERSION_PROMPT)
     except (ErrorAnalisis, recibos.ErrorRecibo) as error:
@@ -62,6 +69,7 @@ def analyze(solicitud: SolicitudAnalisis, usuario: Usuario = Depends(usuario_aut
     # Registro de cada análisis para auditoría, con la identidad verificada en GitHub
     huella = recibos.huella_contenido(solicitud.archivos)
     registro.guardar(id_analisis, solicitud, usuario, aprobado, hallazgos, huella, modelo, VERSION_PROMPT, recibo)
+    # autor_git es el que declara Git y puede ser falso; usuario es el verificado con GitHub
     log.info(
         "analisis=%s usuario=%s autor_git=%s tree=%s archivos=%d aprobado=%s hallazgos=%d",
         id_analisis,
@@ -78,6 +86,7 @@ def analyze(solicitud: SolicitudAnalisis, usuario: Usuario = Depends(usuario_aut
         usuario=usuario.login,
         modelo=modelo,
         version_prompt=VERSION_PROMPT,
+        # Umbral aplicado: el cliente lo usa para separar bloqueos de advertencias
         severidad_bloqueo=ajustes.SEVERIDAD_BLOQUEO,
         hallazgos=hallazgos,
         recibo=recibo,

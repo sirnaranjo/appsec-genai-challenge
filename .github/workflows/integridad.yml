@@ -1,3 +1,4 @@
+# Reglas para la verificación de integridad CI/CD en GitHub durante un PR y en cada push a main
 name: Integridad de commits
 
 on:
@@ -8,6 +9,7 @@ on:
   push:
     branches: [main]
 
+# El token del workflow solo puede leer el repositorio
 permissions:
   contents: read
 
@@ -19,7 +21,9 @@ jobs:
       - name: Descargar la rama base
         uses: actions/checkout@v5
         with:
+          # Historial completo: el verificador necesita los commits padre
           fetch-depth: 0
+          # No deja el token guardado en la configuración de Git
           persist-credentials: false
 
       # Los commits del pull request solo se leen como datos; su código nunca se ejecuta
@@ -39,5 +43,6 @@ jobs:
         env:
           # La llave pública viene de una variable del repositorio, que un pull request no puede cambiar
           APPSEC_PUBLIC_KEY: ${{ vars.APPSEC_PUBLIC_KEY }}
+          # Commits a verificar: en un PR, de la base al último commit del PR; en un push, lo que agregó el push
           DESDE: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.base.sha || github.event.before }}
           HASTA: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.head.sha || github.event.after }}

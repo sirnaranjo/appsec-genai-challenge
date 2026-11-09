@@ -15,6 +15,7 @@ import cliente_api
 import git_cambios
 import presentacion
 
+# Límites por archivo y por commit, los mismos que aplica el servidor (server/modelos.py)
 MAX_BYTES_ARCHIVO = 100_000
 MAX_BYTES_TOTAL = 500_000
 
@@ -24,6 +25,7 @@ def construir_paquete(rutas):
     # incluye en el recibo y el verificador lo compara con el commit que llega al repositorio
     return {
         "tree_hash": git_cambios.tree_hash(),
+        # tree del padre y datos informativos (rama, commit padre, repositorio y autor)
         **git_cambios.metadatos(),
         "archivos": [git_cambios.cambio_de_archivo(ruta) for ruta in rutas],
     }
@@ -34,6 +36,7 @@ def validar_tamano(paquete):
     errores = []
     total = 0
     for archivo in paquete["archivos"]:
+        # Se mide en bytes: un carácter con tilde o un emoji ocupa más de uno
         tamano = len(archivo["contenido"].encode("utf-8"))
         total += tamano
         if tamano > MAX_BYTES_ARCHIVO:

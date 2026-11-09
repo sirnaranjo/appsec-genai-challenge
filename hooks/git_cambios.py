@@ -3,20 +3,28 @@
 import subprocess
 from pathlib import Path
 
+# Líneas sin cambios que acompañan a cada cambio: le dan contexto al LLM
 LINEAS_CONTEXTO = 10
 
 # El verificador del repositorio remoto vuelve a generar estos diffs y debe obtener exactamente
 # el mismo texto: se fijan todas las opciones que de otro modo dependen de la configuración local.
 # Debe coincidir con OPCIONES_DIFF en verifier/recibos.py
 OPCIONES_DIFF = [
+    # Sin códigos de color
     "--no-color",
+    # Sin programas externos ni conversiones configuradas por el usuario
     "--no-ext-diff",
     "--no-textconv",
+    # Un archivo renombrado aparece como borrado y agregado: su contenido completo se analiza
     "--no-renames",
+    # Rutas desde la raíz del repositorio
     "--no-relative",
+    # Hashes completos en las líneas "index"
     "--full-index",
+    # Prefijos fijos de las rutas
     "--src-prefix=a/",
     "--dst-prefix=b/",
+    # Mismo algoritmo de comparación en todos los equipos
     "--diff-algorithm=myers",
     "--indent-heuristic",
     f"-U{LINEAS_CONTEXTO}",
@@ -30,6 +38,7 @@ def git(*args):
 
 
 def git_opcional(*args):
+    # Para datos que pueden no existir, como HEAD en el primer commit o el remoto origin
     try:
         return git(*args).strip() or None
     except subprocess.CalledProcessError:
@@ -42,6 +51,7 @@ def tree_hash():
 
 
 def diff_staged(ruta):
+    # core.quotepath=on: las rutas con caracteres especiales se escriben igual en todos los equipos
     return git("-c", "core.quotepath=on", "diff", "--cached", *OPCIONES_DIFF, "--", ruta)
 
 

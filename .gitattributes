@@ -1,8 +1,11 @@
+# Saltos de línea LF en el repositorio: los diffs y los hashes son iguales en Windows y en Linux
 * text=auto eol=lf
 
+# Scripts de Windows con CRLF
 *.bat text eol=crlf
 *.ps1 text eol=crlf
 
+# Archivos binarios: Git no los convierte ni los compara como texto
 *.png binary
 *.jpg binary
 *.gif binary
