@@ -6,7 +6,7 @@ Pasos (se pueden repetir sin efectos duplicados):
 3. Organización, equipo de desarrolladores y repositorio.
 4. Contenido inicial: la rama actual de este repositorio se sube antes de activar el hook.
 5. Hook pre-receive con verifier/pre_receive.py, exigiendo que el recibo sea de quien hace el push.
-6. Solo merge commits y rama principal protegida.
+6. Solo merge commits y rama principal protegida, incluidos los archivos que definen el control.
 7. Opcional: réplica automática a GitHub (GITHUB_ESPEJO_URL y GITHUB_ESPEJO_TOKEN en el .env).
 
 Uso:
@@ -36,6 +36,9 @@ ORGANIZACION = "appsec"
 EQUIPO = "desarrolladores"
 REPOSITORIO = "proyecto"
 ARCHIVO_CLAVE = RAIZ / "data" / "gitea-administrador.txt"
+# Definen qué se analiza y cómo se verifica: en main no se cambian con un push ni con el merge de un desarrollador.
+# Por ejemplo, agregar una ruta al exclude y luego subir código vulnerable en ella
+ARCHIVOS_PROTEGIDOS = [".pre-commit-config.yaml", ".gitattributes", "verifier/**", "hooks/**", ".github/**"]
 
 
 def docker(*args, entrada=None):
@@ -113,11 +116,17 @@ def crear_repositorio(cliente, nombre=REPOSITORIO):
         "allow_merge_commits": True, "allow_squash_merge": False, "allow_rebase": False,
         "allow_rebase_explicit": False, "allow_fast_forward_only_merge": False, "default_merge_style": "merge",
     }).raise_for_status()
-    # Rama protegida: sin force push ni borrado
-    protecciones = cliente.get(f"/repos/{ORGANIZACION}/{nombre}/branch_protections").json()
-    if not any(proteccion["rule_name"] == "main" for proteccion in protecciones):
-        cliente.post(f"/repos/{ORGANIZACION}/{nombre}/branch_protections",
-                     json={"rule_name": "main", "enable_push": True}).raise_for_status()
+
+
+def proteger_main(cliente, nombre=REPOSITORIO):
+    # Después del contenido inicial: Gitea no puede revisar los archivos protegidos en el primer push de una rama.
+    # Sin force push ni borrado, y solo un administrador puede integrar un pull request que modifique esos archivos
+    proteccion = {"enable_push": True, "protected_file_patterns": ";".join(ARCHIVOS_PROTEGIDOS)}
+    ruta = f"/repos/{ORGANIZACION}/{nombre}/branch_protections"
+    if any(existente["rule_name"] == "main" for existente in cliente.get(ruta).json()):
+        cliente.patch(f"{ruta}/main", json=proteccion).raise_for_status()
+    else:
+        cliente.post(ruta, json={"rule_name": "main", **proteccion}).raise_for_status()
 
 
 def subir_contenido_inicial(cliente, usuario, clave, nombre=REPOSITORIO, carpeta=RAIZ):
@@ -184,6 +193,8 @@ def main():
         print(f"Contenido inicial:      {subir_contenido_inicial(cliente, usuario, clave)}")
         instalar_hook()
         print("Hook pre-receive:       instalado")
+        proteger_main(cliente)
+        print(f"Archivos protegidos:    {', '.join(ARCHIVOS_PROTEGIDOS)}")
         print(f"Réplica a GitHub:       {configurar_espejo(cliente)}")
     print()
     print("Siguientes pasos para cada desarrollador:")

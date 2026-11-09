@@ -31,6 +31,7 @@ def entorno():
     gitea.crear_repositorio(cliente, NOMBRE)
     gitea.subir_contenido_inicial(cliente, administrador, clave_administrador, NOMBRE)
     gitea.instalar_hook(NOMBRE)
+    gitea.proteger_main(cliente, NOMBRE)
 
     usuarios = {}
     for rol in ("autor", "revisor"):
@@ -158,3 +159,35 @@ def test_commits_de_un_fork_sin_recibo_no_entran_por_un_pull_request(trabajo):
     sha = git("rev-parse", "HEAD").stdout.strip()
     commit = httpx.get(f"{gitea.API}/repos/{gitea.ORGANIZACION}/{NOMBRE}/git/commits/{sha}", auth=autor, timeout=60)
     assert commit.status_code == 404
+
+
+def cambio_de_exclusion(trabajo, rama):
+    # Primer paso del ataque: agregar una ruta al exclude, con un recibo válido porque no es código
+    git("checkout", "-q", "-b", rama)
+    configuracion = Path(".pre-commit-config.yaml")
+    contenido = configuracion.read_text(encoding="utf-8").replace("exclude: ^examples/", "exclude: ^(examples/|oculto/)")
+    commit_con_recibo(str(configuracion), contenido, trabajo["autor"][0])
+
+
+def test_no_se_puede_agregar_una_exclusion_con_un_push_a_main(trabajo):
+    cambio_de_exclusion(trabajo, "exclusion-directa")
+    antes = git("ls-remote", url(*trabajo["autor"]), "main").stdout.split()[0]
+    resultado = git("push", url(*trabajo["autor"]), "HEAD:main")
+    assert resultado.returncode != 0
+    assert "protected from changing file .pre-commit-config.yaml" in resultado.stderr
+    assert git("ls-remote", url(*trabajo["autor"]), "main").stdout.split()[0] == antes
+
+
+def test_solo_un_administrador_integra_cambios_a_archivos_protegidos(entorno, trabajo):
+    cliente, _ = entorno
+    cambio_de_exclusion(trabajo, "exclusion-pr")
+    assert git("push", "-q", url(*trabajo["autor"]), "exclusion-pr").returncode == 0
+    pulls = f"{gitea.API}/repos/{gitea.ORGANIZACION}/{NOMBRE}/pulls"
+    numero = httpx.post(pulls, auth=trabajo["autor"], timeout=60,
+                        json={"head": "exclusion-pr", "base": "main", "title": "Exclusion"}).json()["number"]
+
+    desarrollador = httpx.post(f"{pulls}/{numero}/merge", auth=trabajo["revisor"], json={"Do": "merge"}, timeout=60)
+    assert desarrollador.status_code != 200
+    administrador = cliente.post(f"/repos/{gitea.ORGANIZACION}/{NOMBRE}/pulls/{numero}/merge",
+                                 json={"Do": "merge", "force_merge": True})
+    assert administrador.status_code == 200, administrador.text

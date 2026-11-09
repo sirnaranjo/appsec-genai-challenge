@@ -132,6 +132,7 @@ Si un commit falla, ninguna rama del push se actualiza y el desarrollador recibe
 
 - Solo merge commits: squash y rebase crean commits nuevos sin recibo, que el hook rechazaría.
 - `main` protegida contra force push y borrado.
+- Archivos protegidos en `main`: `.pre-commit-config.yaml`, `.gitattributes`, `verifier/`, `hooks/` y `.github/`. Definen qué se analiza y cómo se verifica, así que un desarrollador no puede cambiarlos ni con un push ni con un pull request; solo un administrador puede integrar ese cambio. Sin esta regla, alguien podría agregar una ruta al `exclude` en un push y subir código vulnerable en esa ruta en el siguiente.
 - Escritura solo para el equipo `desarrolladores`.
 
 ### Identidad con OAuth 2.0
@@ -203,7 +204,7 @@ Ningún control en la máquina del desarrollador es definitivo. Estas son las ev
 | Merge con contenido agregado a mano | No es una combinación automática de sus padres y no tiene recibo |
 | Pull request desde un fork con commits sin recibo | Gitea copia esos commits al repositorio al abrir el PR y el hook rechaza la copia |
 | Force push o borrado de `main` | Protección de rama |
-| Agregar archivos al `exclude` de `.pre-commit-config.yaml` | El hook lee los filtros de la configuración ya aceptada en el servidor |
+| Agregar archivos al `exclude` de `.pre-commit-config.yaml` | En el mismo push, el hook usa la configuración ya aceptada en el servidor. En pushes separados, el archivo está protegido en `main` y solo un administrador puede cambiarlo |
 | Modificar el verificador o la llave pública en un push | Gitea usa la copia de su imagen y la llave montada de solo lectura |
 | Instrucciones dentro del código para engañar al LLM | Pre-filtro determinístico y reglas del prompt (sección 4) |
 
@@ -518,6 +519,7 @@ Los cambios en `verifier/` requieren `docker compose up -d --build gitea`, porqu
 | Push rechazado | Seguir la corrección que muestra el mensaje: rehacer los commits rechazados pasando por el análisis |
 | Push rechazado porque el recibo pertenece a otra persona | Cada quien sube sus propios commits. Para integrar el trabajo de otra persona, usar un pull request |
 | Gitea responde 403 al hacer push | El usuario no tiene permiso de escritura: `python scripts/configurar_gitea.py --autorizar <usuario>` |
+| Push a `main` rechazado con "protected from changing file" | El push modifica un archivo protegido. Subirlo a otra rama, abrir un pull request y que lo integre un administrador |
 | Gitea no muestra "Iniciar sesión con GitHub" | Completar la OAuth App en el `.env` y volver a ejecutar `python scripts/configurar_gitea.py` |
 | Falso positivo | Se puede revisar con el id del análisis en el registro del servidor. Los hallazgos de severidad BAJA no bloquean |
 
@@ -675,6 +677,8 @@ Durante el desarrollo se probó un archivo real de autenticación de 760 líneas
 | Squash merge | No permitido por la configuración del repositorio |
 | Commit creado desde el editor web | Rechazado: no tiene recibo |
 | Pull request desde un fork con commits sin recibo | No se puede crear: Gitea copia los commits al repositorio y el hook rechaza la copia |
+| Push a `main` que agrega una ruta al `exclude`, con recibo válido | Rechazado: `.pre-commit-config.yaml` está protegido |
+| Pull request con ese mismo cambio | Un desarrollador no puede integrarlo; un administrador sí |
 
 `tests/test_pre_receive.py`, con el mismo hook en un servidor Git local:
 
@@ -706,7 +710,7 @@ La diferencia con Gitea: en GitHub el commit del PR #1 llegó a su rama y quedó
 ### Pruebas automáticas
 
 - 161 pruebas sin costo: contrato de la API, autenticación, Device Flow, armado del prompt, pre-filtro (incluidos los 16 ataques y una prueba que comprueba que el código del proyecto no dispara el pre-filtro), presentación, recolección de cambios en Git, firma de recibos, ataques al recibo en repositorios temporales (sin recibo, copiado, alterado, firmado con otra llave, algoritmo `none`, lavado con `--amend`, diffs falsos, archivos omitidos y merges) y el hook `pre-receive` con un servidor Git local.
-- 7 pruebas contra Gitea en Docker (`RUN_GITEA_TESTS=1`).
+- 9 pruebas contra Gitea en Docker (`RUN_GITEA_TESTS=1`).
 - 19 pruebas con Claude (`RUN_LLM_TESTS=1`): los tres ejemplos y los 16 ataques.
 
 ### Limitaciones conocidas
@@ -716,7 +720,7 @@ La diferencia con Gitea: en GitHub el commit del PR #1 llegó a su rama y quedó
 - **El recibo certifica el proceso, no la ausencia de vulnerabilidades**: si el análisis no detecta algo, el recibo dirá aprobado.
 - **`--amend` honesto**: también se marca como no verificable. Se corrige con `git reset --soft HEAD~1` y un nuevo commit.
 - **Contribuciones externas**: todo commit necesita un recibo de este servidor, así que el repositorio no acepta contribuciones de quien no tenga acceso. Es lo esperado en un repositorio corporativo.
-- **Administración de Gitea**: quien administra Gitea o el equipo donde corre Docker puede quitar el hook o subir commits por fuera del control. Se mitiga separando la administración de seguridad del desarrollo.
+- **Administración de Gitea**: quien administra Gitea o el equipo donde corre Docker puede quitar el hook, cambiar los archivos protegidos o subir commits por fuera del control. Se mitiga separando la administración de seguridad del desarrollo.
 - **Hook por repositorio**: `configurar_gitea.py` lo instala en `appsec/proyecto`. Otro repositorio necesita el mismo paso.
 - **Historial anterior**: el contenido inicial se sube antes de activar el hook, porque sus commits no tienen recibos. El commit `da4d980` tiene además un recibo de una versión anterior del formato.
 - **Mensajes de Gitea**: cuando el hook rechaza un pull request desde un fork, la web muestra un error genérico (500). El motivo queda en `docker logs appsec-gitea`.
