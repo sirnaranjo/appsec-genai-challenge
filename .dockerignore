@@ -1,0 +1,9 @@
+# Secretos y datos locales nunca entran a una imagen
+.env
+keys/
+data/
+
+.venv/
+.git/
+**/__pycache__/
+.pytest_cache/

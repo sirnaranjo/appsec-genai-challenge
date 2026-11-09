@@ -22,11 +22,18 @@ from recibos import ReciboInvalido, cargar_llave_publica, filtros_desde_texto, g
 SIN_COMMIT = re.compile(r"^0+$")
 
 
-def commits_nuevos(anterior, nuevo):
+def commits_que_entran(anterior, nuevo):
+    # Todos los commits que se incorporan a la rama, aunque ya existan en otra referencia del servidor:
+    # por ejemplo los de un pull request desde un fork, que llegan sin pasar por este hook
     if SIN_COMMIT.match(anterior):
-        # Rama nueva: los commits que todavía no son alcanzables desde ninguna rama del servidor
-        return git("rev-list", "--reverse", nuevo, "--not", "--all").split()
+        return git("rev-list", "--reverse", nuevo, "--not", "--branches").split()
     return git("rev-list", "--reverse", f"{anterior}..{nuevo}").split()
+
+
+def commits_nunca_vistos(nuevo):
+    # Los que el servidor recibe por primera vez. Solo a estos se les exige que el recibo sea de quien hace
+    # el push: los demás ya llegaron por otra vía, como la rama de un PR que otra persona integra
+    return set(git("rev-list", nuevo, "--not", "--all").split())
 
 
 def filtros_confiables():
@@ -52,10 +59,11 @@ def main():
         # Borrar una rama no agrega código
         if SIN_COMMIT.match(nuevo):
             continue
-        for sha in commits_nuevos(anterior, nuevo):
+        nunca_vistos = commits_nunca_vistos(nuevo)
+        for sha in commits_que_entran(anterior, nuevo):
             asunto = git("log", "-1", "--format=%s", sha).strip()[:60]
             try:
-                datos = verificar_commit(sha, llave, filtros, usuario)
+                datos = verificar_commit(sha, llave, filtros, usuario if sha in nunca_vistos else None)
                 print(f"OK     {sha[:8]}  {datos['sub']:<16} {asunto}")
             except ReciboInvalido as error:
                 fallidos += 1

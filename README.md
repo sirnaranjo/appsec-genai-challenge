@@ -121,6 +121,8 @@ GitHub.com no permite ejecutar lógica propia mientras recibe un push, por lo qu
 - Lee los filtros del hook desde la configuración ya aceptada en el servidor, no desde la del push, para que un push no pueda agregar sus propias exclusiones.
 - Puede exigir que los recibos pertenezcan al usuario autenticado que hace el push, a partir de la variable que exponga cada servidor (por ejemplo `GITEA_PUSHER_NAME` o `GL_USERNAME`).
 
+[`docs/gitea.md`](docs/gitea.md) describe una instalación completa con Gitea en Docker, login con GitHub y el hook activo en todas las ramas.
+
 ### Escalabilidad, rendimiento y fricción
 
 Valores medidos durante el desarrollo:
@@ -178,7 +180,7 @@ Señales para monitorear en el servidor:
 
 | Alternativa | Qué aporta | Por qué no se implementó |
 |---|---|---|
-| Gitea como servidor intermedio con réplica a GitHub | Rechazo del push con `verifier/pre_receive.py` y GitHub como copia de solo lectura | Requiere operar un servidor adicional. El hook está incluido y se demuestra con `scripts/demo_pre_receive.py` |
+| Gitea como servidor intermedio con réplica a GitHub | Rechazo del push con `verifier/pre_receive.py` y GitHub como copia de solo lectura | Requiere operar un servidor adicional. Implementada como alternativa en [`docs/gitea.md`](docs/gitea.md) |
 | GitLab.com | Bloquea merges con "Pipelines must succeed" incluso en repositorios privados del plan gratuito | Los tokens OAuth vencen cada 2 horas y requerir aprobación de Code Owners es de pago |
 | Evaluación asíncrona con portal | Sin espera en el commit | El modo síncrono da la respuesta inmediata en el momento del commit |
 | Firma de commits del desarrollador (GPG o SSH) | Refuerza la identidad del autor | No prueba que el código fue analizado. Queda como complemento opcional |
@@ -600,5 +602,6 @@ Durante el desarrollo se probó un archivo real de autenticación de 760 líneas
 | `examples/` | Ejemplos vulnerable, seguro y con prompt injection |
 | `scripts/demo.py`, `scripts/demo_pre_receive.py` | Demostraciones del hook y del rechazo del push |
 | `scripts/generar_llaves.py` | Generación de las llaves de firma |
+| `docker-compose.yml`, `despliegue/`, `scripts/configurar_gitea.py` | Alternativa con Gitea ([`docs/gitea.md`](docs/gitea.md)) |
 | `docs/` | Capturas de la salida real |
 | `tests/` | Pruebas automáticas y corpus de ataques |
