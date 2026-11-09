@@ -21,11 +21,14 @@ log = logging.getLogger("appsec")
 
 DURACION_CACHE_SEGUNDOS = 300
 
+# Lee el encabezado "Authorization: Bearer <token>". auto_error=False: los errores se responden con mensajes propios
 esquema_bearer = HTTPBearer(auto_error=False)
+# Hash del token -> (usuario, momento en que vence la entrada)
 _cache = {}
 
 
 class Usuario(BaseModel):
+    # login: nombre de usuario; id: número de la cuenta, que no cambia aunque cambie el nombre
     login: str
     id: int
 
@@ -43,6 +46,7 @@ def consultar_github(token):
     # 404 o 422: GitHub no reconoce el token para esta app
     if respuesta.status_code in (404, 422):
         return None
+    # Cualquier otro error (por ejemplo 5xx) llega como excepción y termina en 503
     respuesta.raise_for_status()
     datos = respuesta.json()["user"]
     return Usuario(login=datos["login"], id=datos["id"])
@@ -53,10 +57,12 @@ def validar_token(token):
     # DURACION_CACHE_SEGUNDOS en aplicarse. Se guarda el hash del token, nunca el token
     clave = hashlib.sha256(token.encode()).hexdigest()
     guardado = _cache.get(clave)
+    # Entrada vigente: se responde sin consultar a GitHub
     if guardado and guardado[1] > time.monotonic():
         return guardado[0]
 
     usuario = consultar_github(token)
+    # Solo se guardan los tokens válidos; uno inválido se vuelve a consultar
     if usuario:
         _cache[clave] = (usuario, time.monotonic() + DURACION_CACHE_SEGUNDOS)
     return usuario
@@ -82,6 +88,7 @@ def usuario_autenticado(credenciales: HTTPAuthorizationCredentials | None = Depe
 
     if usuario is None:
         raise no_autenticado("El token no es válido o fue revocado")
+    # Autenticado pero fuera de la lista: 403
     if usuario.login.lower() not in ajustes.USUARIOS_PERMITIDOS:
         log.warning("Usuario no autorizado: %s", usuario.login)
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail=f"El usuario {usuario.login} no está autorizado")

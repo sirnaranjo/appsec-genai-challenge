@@ -15,6 +15,7 @@ import cliente_api
 
 
 def iniciar_sesion():
+    # El client_id de la OAuth App lo entrega el servidor; el secreto nunca sale de él
     client_id = cliente_api.configuracion_autenticacion()["client_id"]
     solicitud = autenticacion.solicitar_codigo(client_id)
 
@@ -34,6 +35,7 @@ def mostrar_estado():
     if not token:
         print("No hay una sesión iniciada.")
         return
+    # El servidor confirma que el token sigue siendo válido y el usuario autorizado
     print(f"Sesión iniciada como {cliente_api.usuario_actual(token)['login']}.")
 
 

@@ -24,9 +24,12 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from identify.identify import tags_from_filename
 
+# Debe coincidir con EMISOR_RECIBOS del servidor
 EMISOR = "appsec-genai"
+# id del hook de análisis en .pre-commit-config.yaml, de donde se leen sus filtros
 ID_HOOK = "genai-scan"
 PATRON_TRAILER = re.compile(r"^AppSec-Receipt:\s*(\S+)\s*$", re.MULTILINE)
+# Hash del tree vacío de Git: base del diff del primer commit, que no tiene padre
 ARBOL_VACIO = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
 
 # Deben coincidir con OPCIONES_DIFF en hooks/git_cambios.py: el diff tiene que salir idéntico
@@ -55,6 +58,7 @@ def git(*args):
 
 
 def cargar_llave_publica(pem):
+    # Solo se acepta una llave Ed25519, la que usa el servidor para firmar
     llave = serialization.load_pem_public_key(pem)
     if not isinstance(llave, Ed25519PublicKey):
         raise ValueError("La llave pública no es Ed25519")
@@ -72,15 +76,18 @@ def filtros_desde_texto(texto):
         for hook in repo["hooks"]:
             if hook["id"] == ID_HOOK:
                 exclude = hook.get("exclude")
+                # (tipos de archivo que se analizan, expresión de las rutas excluidas)
                 return set(hook.get("types_or", [])), re.compile(exclude) if exclude else None
     raise ValueError(f"No se encontró el hook {ID_HOOK} en la configuración de pre-commit")
 
 
 def decodificar(parte):
+    # Base64 de JWT: se completa el relleno "=" que se quitó al codificar
     return base64.urlsafe_b64decode(parte + "=" * (-len(parte) % 4))
 
 
 def verificar_firma(recibo, llave):
+    # encabezado.cuerpo.firma
     partes = recibo.split(".")
     if len(partes) != 3:
         raise ReciboInvalido("el recibo no tiene un formato válido")
@@ -117,15 +124,19 @@ def es_merge_sin_cambios_propios(sha):
     lista = padres(sha)
     if len(lista) != 2:
         return False
+    # Repite la combinación sin modificar el repositorio; falla si hay conflictos, que se resuelven a mano
     combinado = subprocess.run(["git", "merge-tree", "--write-tree", *lista], capture_output=True)
     if combinado.returncode != 0:
         return False
+    # La primera línea de la salida es el tree resultante
     return combinado.stdout.decode().split()[0] == tree(sha)
 
 
 def archivos_de_codigo(desde, hasta, filtros):
     tipos, exclusion = filtros
+    # Archivos cambiados, sin los borrados (no agregan código). -z: rutas separadas por \0, sin escapar
     cambiados = git("diff", "--name-only", "--no-renames", "--diff-filter=d", "-z", desde, hasta).split("\0")
+    # Los que el hook habría analizado: su tipo (según la extensión, como en pre-commit) y no excluidos
     return {
         ruta
         for ruta in cambiados
@@ -144,6 +155,7 @@ def huella(pares):
 
 
 def verificar_contenido(sha, datos, filtros):
+    # Los cambios se calculan contra el primer padre, o contra un árbol vacío en el primer commit
     lista = padres(sha)
     desde = lista[0] if lista else ARBOL_VACIO
     rutas = datos.get("rutas")
@@ -181,6 +193,7 @@ def verificar_commit(sha, llave, filtros, usuario_esperado=None):
     if datos.get("base") != (tree(lista[0]) if lista else None):
         raise ReciboInvalido("el análisis no se calculó contra el padre de este commit")
     verificar_contenido(sha, datos, filtros)
+    # Opcional: el hook de Gitea lo exige a los commits que recibe por primera vez
     if usuario_esperado and str(datos.get("sub", "")).lower() != usuario_esperado.lower():
         raise ReciboInvalido(f"el recibo pertenece a {datos.get('sub')} y no a {usuario_esperado}")
     return datos

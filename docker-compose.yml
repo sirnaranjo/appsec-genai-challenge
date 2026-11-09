@@ -4,7 +4,9 @@ services:
       context: .
       dockerfile: despliegue/analizador/Dockerfile
     container_name: appsec-analizador
+    # API key, OAuth y usuarios permitidos se leen del .env al crear el contenedor
     env_file: .env
+    # Rutas dentro del contenedor; reemplazan las del .env
     environment:
       - RECEIPT_PRIVATE_KEY_PATH=/llaves/receipt_private.pem
       - DATABASE_PATH=/datos/appsec.db
@@ -14,6 +16,7 @@ services:
     volumes:
       # La llave privada solo existe en este contenedor
       - ./keys/receipt_private.pem:/llaves/receipt_private.pem:ro
+      # Registro de auditoría; se conserva al recrear el contenedor
       - analizador-datos:/datos
 
   gitea:
@@ -21,11 +24,15 @@ services:
       context: .
       dockerfile: despliegue/gitea/Dockerfile
     container_name: appsec-gitea
+    # Configuración de Gitea por variables: GITEA__<sección>__<opción> equivale a app.ini
     environment:
+      # Usuario del sistema con que corre Gitea dentro del contenedor
       - USER_UID=1000
       - USER_GID=1000
       - GITEA__database__DB_TYPE=sqlite3
+      # Omite el asistente web de instalación: la configuración ya está completa
       - GITEA__security__INSTALL_LOCK=true
+      # Dirección pública de Gitea; debe coincidir con la URL de callback de la OAuth App
       - GITEA__server__ROOT_URL=http://localhost:3000/
       - GITEA__server__DOMAIN=localhost
       # Las cuentas solo se crean iniciando sesión con GitHub, con el mismo nombre de usuario
@@ -36,6 +43,7 @@ services:
     ports:
       - "3000:3000"
     volumes:
+      # Repositorios, usuarios y configuración de Gitea
       - gitea-datos:/data
       # Gitea solo recibe la llave pública, de solo lectura; el verificador va dentro de la imagen
       - ./keys/receipt_public.pem:/appsec/receipt_public.pem:ro

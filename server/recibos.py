@@ -19,10 +19,12 @@ class ErrorRecibo(Exception):
 
 
 def b64url(datos):
+    # Base64 para URL y sin relleno "=", como exige el formato JWT
     return base64.urlsafe_b64encode(datos).rstrip(b"=").decode()
 
 
 def json_canonico(datos):
+    # Claves ordenadas y sin espacios: los mismos datos producen siempre los mismos bytes
     return json.dumps(datos, separators=(",", ":"), sort_keys=True, ensure_ascii=False).encode()
 
 
@@ -47,6 +49,7 @@ def huella_contenido(archivos):
 
 
 def firmar(contenido):
+    # JWT: encabezado.cuerpo.firma, donde la firma cubre el texto "encabezado.cuerpo"
     encabezado = b64url(json_canonico({"alg": "EdDSA", "typ": "JWT", "kid": id_llave()}))
     cuerpo = b64url(json_canonico(contenido))
     firma = llave_privada().sign(f"{encabezado}.{cuerpo}".encode())
@@ -56,6 +59,7 @@ def firmar(contenido):
 def emitir(solicitud, usuario, id_analisis, advertencias, modelo, version_prompt):
     return firmar(
         {
+            # Emisor, usuario verificado en GitHub (nombre e id) y fecha de emisión
             "iss": ajustes.EMISOR_RECIBOS,
             "sub": usuario.login,
             "uid": usuario.id,
@@ -69,6 +73,7 @@ def emitir(solicitud, usuario, id_analisis, advertencias, modelo, version_prompt
             # los diffs del commit y comprueba que sean los mismos que se analizaron
             "rutas": sorted(archivo.ruta for archivo in solicitud.archivos),
             "contenido": huella_contenido(solicitud.archivos),
+            # Cantidad de hallazgos que no bloquearon, y con qué modelo y prompt se analizó
             "advertencias": advertencias,
             "modelo": modelo,
             "prompt": version_prompt,

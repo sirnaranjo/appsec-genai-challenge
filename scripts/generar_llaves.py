@@ -24,6 +24,7 @@ def main():
 
     llave = Ed25519PrivateKey.generate()
     CARPETA.mkdir(exist_ok=True)
+    # Formatos PEM estándar. Sin contraseña: el servidor la carga al iniciar sin intervención
     PRIVADA.write_bytes(
         llave.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption())
     )
@@ -34,6 +35,7 @@ def main():
     print(f"Llave privada: {PRIVADA}")
     print(f"Llave pública: {PUBLICA}")
     print()
+    # La pública se muestra para copiarla en la variable APPSEC_PUBLIC_KEY de GitHub
     print(PUBLICA.read_text())
     return 0
 

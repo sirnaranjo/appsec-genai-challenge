@@ -12,12 +12,14 @@ import sys
 
 import git_cambios
 
+# Línea al final del mensaje del commit que lleva el recibo: "AppSec-Receipt: <JWT>"
 TRAILER = "AppSec-Receipt"
 PATRON_TRAILER = re.compile(rf"^{TRAILER}:\s*(\S+)\s*$", re.MULTILINE)
 
 
 def contenido_recibo(recibo):
     # El cliente solo lee el contenido; la firma la verifica el verificador con la llave pública
+    # Parte central del JWT; se completa el relleno "=" que Base64 necesita para decodificarla
     cuerpo = recibo.split(".")[1]
     return json.loads(base64.urlsafe_b64decode(cuerpo + "=" * (-len(cuerpo) % 4)))
 
@@ -27,9 +29,12 @@ def problema_del_ultimo_commit():
     if not encontrados:
         return "no tiene recibo de análisis (por ejemplo, porque se usó --no-verify)"
 
+    # Se usa el último recibo del mensaje, igual que el verificador
     datos = contenido_recibo(encontrados[-1])
+    # El contenido del commit debe ser el analizado
     if datos.get("tree") != git_cambios.git("rev-parse", "HEAD^{tree}").strip():
         return "tiene un contenido distinto al analizado"
+    # Y el análisis debe haberse hecho contra su padre; sin padres es el primer commit
     padres = git_cambios.git("log", "-1", "--format=%P").split()
     base = git_cambios.git("rev-parse", f"{padres[0]}^{{tree}}").strip() if padres else None
     if datos.get("base") != base:

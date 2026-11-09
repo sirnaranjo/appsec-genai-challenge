@@ -19,6 +19,7 @@ from pathlib import Path
 
 from recibos import ReciboInvalido, cargar_llave_publica, filtros_desde_texto, git, verificar_commit
 
+# Hash de ceros: indica una rama nueva (en el hash anterior) o una rama borrada (en el nuevo)
 SIN_COMMIT = re.compile(r"^0+$")
 
 # Causa probable de cada error del verificador, para quien recibe el rechazo
@@ -35,6 +36,7 @@ CAUSAS = (
 )
 CAUSA_RECIBO_ALTERADO = "El recibo fue modificado o no lo emitió el servidor de análisis de este repositorio."
 
+# Instrucciones que acompañan a todo rechazo
 CORRECCION = """\
 Ninguna rama se actualizó. Para corregirlo, rehacer los commits rechazados pasando por el análisis.
 Si es solo el último commit:
@@ -44,6 +46,7 @@ Y volver a hacer el push."""
 
 
 def causa(error):
+    # La primera causa cuyo texto aparece en el error; si ninguna coincide, el recibo fue alterado
     texto = str(error)
     return next((descripcion for clave, descripcion in CAUSAS if clave in texto), CAUSA_RECIBO_ALTERADO)
 
@@ -51,8 +54,10 @@ def causa(error):
 def commits_que_entran(anterior, nuevo):
     # Todos los commits que se incorporan a la rama, aunque ya existan en otra referencia del servidor:
     # por ejemplo los de un pull request desde un fork, que llegan sin pasar por este hook
+    # Rama nueva: los commits que no están en ninguna rama existente
     if SIN_COMMIT.match(anterior):
         return git("rev-list", "--reverse", nuevo, "--not", "--branches").split()
+    # Rama existente: los commits entre su estado actual y el nuevo
     return git("rev-list", "--reverse", f"{anterior}..{nuevo}").split()
 
 
@@ -87,14 +92,17 @@ def main():
             continue
         nunca_vistos = commits_nunca_vistos(nuevo)
         for sha in commits_que_entran(anterior, nuevo):
+            # Asunto del commit, recortado para la salida
             asunto = git("log", "-1", "--format=%s", sha).strip()[:60]
             try:
+                # La identidad se exige solo a los commits nuevos para el servidor
                 datos = verificar_commit(sha, llave, filtros, usuario if sha in nunca_vistos else None)
                 print(f"OK     {sha[:8]}  {datos['sub']:<16} {asunto}")
             except ReciboInvalido as error:
                 fallidos.append((sha, asunto, error))
                 print(f"FALLA  {sha[:8]}  {error}  ({asunto})")
 
+    # Código de salida distinto de 0: Git rechaza el push completo
     if not fallidos:
         return 0
     print()

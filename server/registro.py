@@ -6,6 +6,8 @@ from datetime import datetime, timezone
 
 from server import ajustes
 
+# Una fila por análisis. Las listas (archivos y hallazgos) se guardan como JSON.
+# El índice por tree permite encontrar el análisis de un commit a partir de su contenido
 ESQUEMA = """
 CREATE TABLE IF NOT EXISTS analisis (
     id TEXT PRIMARY KEY,
@@ -31,6 +33,7 @@ CREATE INDEX IF NOT EXISTS idx_analisis_tree ON analisis (tree_hash);
 
 
 def conectar():
+    # Crea la carpeta y la tabla si no existen
     ajustes.RUTA_BASE_DATOS.parent.mkdir(parents=True, exist_ok=True)
     conexion = sqlite3.connect(ajustes.RUTA_BASE_DATOS)
     conexion.executescript(ESQUEMA)
@@ -60,6 +63,7 @@ def guardar(id_analisis, solicitud, usuario, aprobado, hallazgos, huella, modelo
     # Consultas parametrizadas: ningún dato del cliente se concatena en el SQL
     with conectar() as conexion:
         conexion.execute(f"INSERT INTO analisis VALUES ({', '.join('?' * len(fila))})", fila)
+    # El bloque with confirma la transacción, pero no cierra la conexión
     conexion.close()
 
 

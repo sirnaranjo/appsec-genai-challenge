@@ -11,6 +11,7 @@ from rich.text import Text
 # (en Windows rich usaría el modo de consola antiguo, que no funciona a través de pre-commit)
 consola = Console(force_terminal=True, legacy_windows=False, color_system="standard", width=100, highlight=False)
 
+# De menor a mayor, igual que en el servidor
 SEVERIDADES = ["BAJA", "MEDIA", "ALTA", "CRITICA"]
 COLORES = {"CRITICA": "bold red", "ALTA": "red", "MEDIA": "yellow", "BAJA": "cyan"}
 
@@ -27,6 +28,7 @@ def limpiar(valor):
 
 
 def bloquea(hallazgo, severidad_bloqueo):
+    # Solo para mostrarlo como vulnerabilidad o advertencia; la decisión ya la tomó el servidor
     return SEVERIDADES.index(hallazgo["severidad"]) >= SEVERIDADES.index(severidad_bloqueo)
 
 
@@ -60,6 +62,7 @@ def panel_hallazgo(hallazgo, es_bloqueante):
 
 def mostrar_resultado(resultado):
     limpios = [{campo: limpiar(valor) for campo, valor in h.items()} for h in resultado["hallazgos"]]
+    # De mayor a menor severidad
     hallazgos = sorted(limpios, key=lambda h: SEVERIDADES.index(h["severidad"]), reverse=True)
     bloqueantes = [h for h in hallazgos if bloquea(h, resultado["severidad_bloqueo"])]
 

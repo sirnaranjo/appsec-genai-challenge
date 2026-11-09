@@ -6,9 +6,11 @@ import httpx
 import keyring
 import keyring.errors
 
+# Nombre con que el token queda en el almacén de credenciales
 SERVICIO_KEYRING = "appsec-genai-gitea"
 CUENTA_KEYRING = "github"
 
+# Device Flow (RFC 8628): se pide un código para el usuario y luego se consulta hasta obtener el token
 URL_CODIGO = "https://github.com/login/device/code"
 URL_TOKEN = "https://github.com/login/oauth/access_token"
 GRANT_TYPE = "urn:ietf:params:oauth:grant-type:device_code"
@@ -18,7 +20,7 @@ class ErrorLogin(Exception):
     pass
 
 
-# El token se guarda en el almacén de credenciales del sistema operativo, no en un archivo
+# El token se guarda en el almacén de credenciales del sistema operativo (keyring)
 def token_guardado():
     return keyring.get_password(SERVICIO_KEYRING, CUENTA_KEYRING)
 
@@ -43,6 +45,7 @@ def solicitar_codigo(client_id):
     datos = respuesta.json()
     if "error" in datos:
         raise ErrorLogin(datos.get("error_description", datos["error"]))
+    # device_code, user_code, verification_uri, interval (segundos entre consultas) y expires_in
     return datos
 
 
@@ -62,13 +65,16 @@ def esperar_autorizacion(client_id, solicitud):
         if "access_token" in datos:
             return datos["access_token"]
         error = datos.get("error")
+        # El usuario todavía no autoriza
         if error == "authorization_pending":
             continue
+        # Se consultó demasiado rápido: GitHub indica un intervalo mayor
         if error == "slow_down":
             intervalo = datos.get("interval", intervalo + 5)
             continue
         if error == "access_denied":
             raise ErrorLogin("La autorización fue rechazada en GitHub.")
+        # El código venció
         if error == "expired_token":
             break
         raise ErrorLogin(datos.get("error_description", error))

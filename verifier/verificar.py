@@ -20,10 +20,12 @@ from pathlib import Path
 from recibos import ReciboInvalido, cargar_llave_publica, filtros_del_hook, git, verificar_commit
 
 RAIZ = Path(__file__).resolve().parent.parent
+# Hash de ceros: Git lo usa cuando no hay commit anterior, por ejemplo en una rama nueva
 SIN_COMMIT = re.compile(r"^0+$")
 
 
 def leer_llave(ruta):
+    # En orden: --llave, la variable APPSEC_PUBLIC_KEY (GitHub Actions) o el archivo local
     if ruta:
         return cargar_llave_publica(Path(ruta).read_bytes())
     if os.environ.get("APPSEC_PUBLIC_KEY"):
@@ -40,6 +42,7 @@ def commits_de(revisiones):
             if SIN_COMMIT.match(desde):
                 commits.append(git("rev-parse", "--verify", f"{hasta}^{{commit}}").strip())
             else:
+                # Todos los commits del rango, del más antiguo al más reciente
                 commits += git("rev-list", "--reverse", revision).split()
         else:
             commits.append(git("rev-parse", "--verify", f"{revision}^{{commit}}").strip())
@@ -49,6 +52,7 @@ def commits_de(revisiones):
 def escribir_resumen(ruta, filas, fallidos):
     estado = f"❌ {fallidos} commit(s) sin un recibo válido" if fallidos else "✅ Todos los commits tienen un recibo válido"
     lineas = [f"## Recibos de integridad: {estado}", "", "| Commit | Resultado | Usuario | Asunto |", "|---|---|---|---|"]
+    # "|" en el asunto rompería la tabla de Markdown
     lineas += [f"| `{sha[:8]}` | {resultado} | {usuario} | {asunto.replace('|', '/')} |" for sha, resultado, usuario, asunto in filas]
     with open(ruta, "a", encoding="utf-8") as archivo:
         archivo.write("\n".join(lineas) + "\n")
