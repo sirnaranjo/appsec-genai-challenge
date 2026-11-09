@@ -69,6 +69,10 @@ def test_push_sin_recibo_se_rechaza(servidor):
     assert resultado.returncode != 0
     assert "no tiene recibo" in resultado.stderr
     assert "pre-receive hook declined" in resultado.stderr
+    # El rechazo explica la causa y cómo corregirlo
+    assert "PUSH RECHAZADO" in resultado.stderr
+    assert "--no-verify" in resultado.stderr
+    assert "git reset --soft HEAD~1" in resultado.stderr
     # El código nunca llegó al servidor
     assert rama_en_servidor(servidor) == antes
 
@@ -126,6 +130,19 @@ def test_recibo_de_otra_persona_se_rechaza_en_el_push(servidor):
     resultado = push("main", usuario="otro")
     assert resultado.returncode != 0
     assert "pertenece a dev y no a otro" in resultado.stderr
+    assert "Cada commit nuevo lo debe subir" in resultado.stderr
+
+
+@pytest.mark.parametrize("mensaje, esperado", [
+    ("el análisis no fue aprobado", "encontró vulnerabilidades"),
+    ("hay archivos de código que no se analizaron: a.py", "fuera del análisis"),
+    ("el contenido del commit no es el que se analizó", "cambió después"),
+    ("el análisis no se calculó contra el padre de este commit", "--amend"),
+    ("la firma del recibo no es válida", "fue modificado"),
+])
+def test_cada_motivo_tiene_una_causa_explicada(mensaje, esperado):
+    from pre_receive import causa
+    assert esperado in causa(mensaje)
 
 
 def test_otra_persona_puede_integrar_una_rama_ya_verificada(servidor):

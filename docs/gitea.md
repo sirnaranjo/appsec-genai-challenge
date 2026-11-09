@@ -124,19 +124,24 @@ El commit funciona igual que en la solución principal. La diferencia está en e
 git push gitea mi-rama
 ```
 
-Un commit hecho con `--no-verify` se rechaza en el servidor (salida recortada):
+Un commit hecho con `--no-verify` se rechaza en el servidor, con el motivo, la causa probable y cómo corregirlo:
 
 ```
-remote: FALLA  3f2a91c0  el commit no tiene recibo de análisis  (Sin analisis)
-remote: Push rechazado: 1 commit(s) sin un recibo de integridad válido.
+remote: FALLA  713d67f4  el commit no tiene recibo de análisis  (Prueba sin analisis)
+remote:
+remote: PUSH RECHAZADO por el control de seguridad: 1 commit(s) sin un recibo de análisis válido.
+remote:
+remote:   Commit:  713d67f4  Prueba sin analisis
+remote:   Motivo:  el commit no tiene recibo de análisis
+remote:   Causa:   El commit no pasó por el análisis de seguridad: se hizo con --no-verify, sin los hooks instalados o con rebase, cherry-pick o squash.
+remote:
+remote: Ninguna rama se actualizó. Para corregirlo, rehacer los commits rechazados pasando por el análisis.
+remote: Si es solo el último commit:
+remote:     git reset --soft HEAD~1
+remote:     git commit -m "mensaje"
+remote: Y volver a hacer el push.
+remote:
  ! [remote rejected] mi-rama -> mi-rama (pre-receive hook declined)
-```
-
-Para corregirlo, se rehace el commit pasando por el análisis:
-
-```bash
-git reset --soft HEAD~1
-git commit -m "Mismo mensaje"
 ```
 
 Los pull requests se crean y se integran desde la web de Gitea con el botón **Merge**.
