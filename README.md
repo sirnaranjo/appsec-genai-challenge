@@ -149,7 +149,7 @@ Como los dos nombres coinciden, el hook compara el usuario del recibo con el que
 - La llave privada de firma solo se monta en el contenedor de análisis, de solo lectura.
 - Gitea recibe solo la llave pública, de solo lectura. El verificador se copia dentro de su imagen al construirla. Un push no puede cambiar el verificador ni la llave que se usan para revisarlo.
 - `.dockerignore` deja fuera de las imágenes el `.env`, `keys/` y `data/`.
-- La contraseña del administrador de Gitea se genera al azar y se guarda en `data/gitea-administrador.txt`, fuera del control de versiones.
+- La contraseña del administrador de Gitea la elige quien instala, con al menos 12 caracteres, o se genera al azar si presiona Enter. Se guarda en el almacén de credenciales del sistema operativo, como el token del cliente. Solo si el sistema no tiene uno (por ejemplo, un servidor Linux sin escritorio) se guarda en `data/gitea-administrador.txt`, legible solo por su dueño y fuera del control de versiones.
 
 ### Réplica y verificación en GitHub
 
@@ -316,7 +316,7 @@ Configurar Gitea: administrador, login con GitHub, organización `appsec`, equip
 python scripts/configurar_gitea.py
 ```
 
-El historial existente se sube antes de activar el hook, porque sus commits no tienen recibos. La contraseña del administrador queda en `data/gitea-administrador.txt`.
+El historial existente se sube antes de activar el hook, porque sus commits no tienen recibos. La primera vez, el script pide la contraseña del administrador (dos veces y sin mostrarla); con Enter genera una aleatoria. Queda en el almacén de credenciales del sistema y se consulta con `python scripts/configurar_gitea.py --clave-administrador`, para entrar a la web como `administrador`. Si se pierde, volver a ejecutar el script la pide de nuevo y se la asigna al administrador.
 
 ### Cliente (cada desarrollador)
 
@@ -519,7 +519,7 @@ Los cambios en `verifier/` requieren `docker compose up -d --build gitea`, porqu
 | Push rechazado | Seguir la corrección que muestra el mensaje: rehacer los commits rechazados pasando por el análisis |
 | Push rechazado porque el recibo pertenece a otra persona | Cada quien sube sus propios commits. Para integrar el trabajo de otra persona, usar un pull request |
 | Gitea responde 403 al hacer push | El usuario no tiene permiso de escritura: `python scripts/configurar_gitea.py --autorizar <usuario>` |
-| Push a `main` rechazado con "protected from changing file" | El push modifica un archivo protegido. Subirlo a otra rama, abrir un pull request y que lo integre un administrador |
+| Push a `main` rechazado con "protected from changing file" | El push modifica un archivo protegido. Subirlo a otra rama, abrir un pull request y que lo integre un administrador (contraseña con `--clave-administrador`) |
 | Gitea no muestra "Iniciar sesión con GitHub" | Completar la OAuth App en el `.env` y volver a ejecutar `python scripts/configurar_gitea.py` |
 | Falso positivo | Se puede revisar con el id del análisis en el registro del servidor. Los hallazgos de severidad BAJA no bloquean |
 
@@ -709,8 +709,8 @@ La diferencia con Gitea: en GitHub el commit del PR #1 llegó a su rama y quedó
 
 ### Pruebas automáticas
 
-- 161 pruebas sin costo: contrato de la API, autenticación, Device Flow, armado del prompt, pre-filtro (incluidos los 16 ataques y una prueba que comprueba que el código del proyecto no dispara el pre-filtro), presentación, recolección de cambios en Git, firma de recibos, ataques al recibo en repositorios temporales (sin recibo, copiado, alterado, firmado con otra llave, algoritmo `none`, lavado con `--amend`, diffs falsos, archivos omitidos y merges) y el hook `pre-receive` con un servidor Git local.
-- 9 pruebas contra Gitea en Docker (`RUN_GITEA_TESTS=1`).
+- 167 pruebas sin costo: contrato de la API, autenticación, Device Flow, armado del prompt, pre-filtro (incluidos los 16 ataques y una prueba que comprueba que el código del proyecto no dispara el pre-filtro), presentación, recolección de cambios en Git, firma de recibos, ataques al recibo en repositorios temporales (sin recibo, copiado, alterado, firmado con otra llave, algoritmo `none`, lavado con `--amend`, diffs falsos, archivos omitidos y merges) el hook `pre-receive` con un servidor Git local y cómo se pide y dónde se guarda la contraseña del administrador de Gitea.
+- 10 pruebas contra Gitea en Docker (`RUN_GITEA_TESTS=1`).
 - 19 pruebas con Claude (`RUN_LLM_TESTS=1`): los tres ejemplos y los 16 ataques.
 
 ### Limitaciones conocidas
