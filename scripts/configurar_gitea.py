@@ -1,7 +1,7 @@
 """Configura la instancia de Gitea de docker compose como servidor Git con control de integridad.
 
 Pasos (se pueden repetir sin efectos duplicados):
-1. Usuario administrador, con la contraseña guardada en data/gitea-administrador.txt.
+1. Usuario administrador, con la contraseña que se indique (o una aleatoria) guardada en el almacén de credenciales.
 2. Login con GitHub (OAuth 2.0) usando GITHUB_OAUTH_CLIENT_ID y GITHUB_OAUTH_CLIENT_SECRET del .env.
 3. Organización, equipo de desarrolladores y repositorio.
 4. Contenido inicial: la rama actual de este repositorio se sube antes de activar el hook.
@@ -12,10 +12,12 @@ Pasos (se pueden repetir sin efectos duplicados):
 Uso:
     python scripts/configurar_gitea.py                    configuración inicial
     python scripts/configurar_gitea.py --autorizar LOGIN  da permiso de escritura a quien ya inició sesión con GitHub
+    python scripts/configurar_gitea.py --clave-administrador  muestra la contraseña para entrar a la web como administrador
 """
 
 import argparse
 import base64
+import getpass
 import os
 import secrets
 import subprocess
@@ -23,7 +25,9 @@ import sys
 from pathlib import Path
 
 import httpx
+import keyring
 from dotenv import load_dotenv
+from keyring.errors import KeyringError
 
 RAIZ = Path(__file__).resolve().parent.parent
 load_dotenv(RAIZ / ".env")
@@ -35,7 +39,11 @@ ADMINISTRADOR = "administrador"
 ORGANIZACION = "appsec"
 EQUIPO = "desarrolladores"
 REPOSITORIO = "proyecto"
+SERVICIO_KEYRING = "appsec-genai-gitea-administrador"
+ALMACEN = "almacén de credenciales del sistema"
+# Solo si el sistema no tiene almacén de credenciales, como un servidor Linux sin escritorio
 ARCHIVO_CLAVE = RAIZ / "data" / "gitea-administrador.txt"
+CLAVE_MINIMA = 12
 # Definen qué se analiza y cómo se verifica: en main no se cambian con un push ni con el merge de un desarrollador.
 # Por ejemplo, agregar una ruta al exclude y luego subir código vulnerable en ella
 ARCHIVOS_PROTEGIDOS = [".pre-commit-config.yaml", ".gitattributes", "verifier/**", "hooks/**", ".github/**"]
@@ -62,19 +70,72 @@ def crear_usuario_local(nombre, clave, administrador=False):
     resultado = docker("gitea", "admin", "user", "create", "--username", nombre, "--password", clave,
                        "--email", f"{nombre}@appsec.local", "--must-change-password=false",
                        *(["--admin"] if administrador else []))
-    if resultado.returncode != 0 and b"already exists" not in resultado.stderr:
+    if resultado.returncode == 0:
+        return
+    if b"already exists" not in resultado.stderr:
         raise RuntimeError(resultado.stderr.decode(errors="replace"))
+    # Ya existía: recibe la contraseña nueva, por ejemplo si se perdió la guardada
+    cambio = docker("gitea", "admin", "user", "change-password", "--username", nombre, "--password", clave,
+                    "--must-change-password=false")
+    if cambio.returncode != 0:
+        raise RuntimeError(cambio.stderr.decode(errors="replace"))
+
+
+def guardar_clave(clave):
+    try:
+        keyring.set_password(SERVICIO_KEYRING, GITEA, clave)
+        return ALMACEN
+    except KeyringError:
+        ARCHIVO_CLAVE.parent.mkdir(exist_ok=True)
+        # Solo el dueño puede leerlo
+        ARCHIVO_CLAVE.touch(mode=0o600)
+        ARCHIVO_CLAVE.write_text(clave, encoding="utf-8")
+        return str(ARCHIVO_CLAVE.relative_to(RAIZ))
+
+
+def leer_clave():
+    try:
+        clave = keyring.get_password(SERVICIO_KEYRING, GITEA)
+    except KeyringError:
+        clave = None
+    if clave is None and ARCHIVO_CLAVE.exists():
+        clave = ARCHIVO_CLAVE.read_text(encoding="utf-8").strip()
+        # La clave que una versión anterior guardó en el archivo pasa al almacén del sistema, si está disponible
+        if guardar_clave(clave) == ALMACEN:
+            ARCHIVO_CLAVE.unlink()
+    return clave
+
+
+def ubicacion_clave():
+    return ARCHIVO_CLAVE.relative_to(RAIZ).as_posix() if ARCHIVO_CLAVE.exists() else f"el {ALMACEN}"
+
+
+def hay_terminal():
+    return sys.stdin.isatty()
+
+
+def pedir_clave():
+    # Sin terminal interactiva, como en las pruebas automáticas, se genera una aleatoria sin preguntar
+    if not hay_terminal():
+        return secrets.token_urlsafe(24)
+    while True:
+        clave = getpass.getpass("Contraseña para el administrador de Gitea (Enter para generar una aleatoria): ")
+        if not clave:
+            return secrets.token_urlsafe(24)
+        if len(clave) < CLAVE_MINIMA:
+            print(f"Debe tener al menos {CLAVE_MINIMA} caracteres.")
+        elif getpass.getpass("Repítela: ") != clave:
+            print("Las contraseñas no coinciden.")
+        else:
+            return clave
 
 
 def credenciales_administrador():
-    if ARCHIVO_CLAVE.exists():
-        return ADMINISTRADOR, ARCHIVO_CLAVE.read_text(encoding="utf-8").strip()
-    clave = secrets.token_urlsafe(24)
-    crear_usuario_local(ADMINISTRADOR, clave, administrador=True)
-    ARCHIVO_CLAVE.parent.mkdir(exist_ok=True)
-    # Solo el dueño puede leerlo (en Windows rigen además los permisos de la carpeta del usuario)
-    ARCHIVO_CLAVE.touch(mode=0o600)
-    ARCHIVO_CLAVE.write_text(clave, encoding="utf-8")
+    clave = leer_clave()
+    if clave is None:
+        clave = pedir_clave()
+        crear_usuario_local(ADMINISTRADOR, clave, administrador=True)
+        guardar_clave(clave)
     return ADMINISTRADOR, clave
 
 
@@ -178,15 +239,20 @@ def autorizar(cliente, login):
 def main():
     parser = argparse.ArgumentParser(description="Configuración de Gitea para el control de integridad")
     parser.add_argument("--autorizar", metavar="LOGIN", help="usuario de GitHub que ya inició sesión en Gitea")
+    parser.add_argument("--clave-administrador", action="store_true",
+                        help="muestra la contraseña del administrador para entrar a la web de Gitea")
     argumentos = parser.parse_args()
 
     usuario, clave = credenciales_administrador()
+    if argumentos.clave_administrador:
+        print(clave)
+        return 0
     with httpx.Client(base_url=API, auth=(usuario, clave), timeout=30) as cliente:
         if argumentos.autorizar:
             print(autorizar(cliente, argumentos.autorizar))
             return 0
 
-        print(f"Administrador:          {usuario} (contraseña en {ARCHIVO_CLAVE.relative_to(RAIZ)})")
+        print(f"Administrador:          {usuario} (contraseña en {ubicacion_clave()}; se muestra con --clave-administrador)")
         print(f"Login con GitHub:       {configurar_login_github()}")
         crear_repositorio(cliente)
         print(f"Repositorio:            {GITEA}/{ORGANIZACION}/{REPOSITORIO}")

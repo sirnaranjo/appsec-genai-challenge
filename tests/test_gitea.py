@@ -191,3 +191,16 @@ def test_solo_un_administrador_integra_cambios_a_archivos_protegidos(entorno, tr
     administrador = cliente.post(f"/repos/{gitea.ORGANIZACION}/{NOMBRE}/pulls/{numero}/merge",
                                  json={"Do": "merge", "force_merge": True})
     assert administrador.status_code == 200, administrador.text
+
+
+def test_un_usuario_existente_recibe_la_clave_nueva(entorno):
+    # Si se pierde la contraseña guardada del administrador, la configuración le asigna una nueva
+    cliente, _ = entorno
+    nombre = f"recuperado-{secrets.token_hex(3)}"
+    gitea.crear_usuario_local(nombre, secrets.token_urlsafe(18))
+    nueva = secrets.token_urlsafe(18)
+    try:
+        gitea.crear_usuario_local(nombre, nueva)
+        assert httpx.get(f"{gitea.API}/user", auth=(nombre, nueva), timeout=60).status_code == 200
+    finally:
+        cliente.delete(f"/admin/users/{nombre}", params={"purge": "true"})
