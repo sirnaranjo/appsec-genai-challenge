@@ -1,13 +1,14 @@
 # AppSec GenAI Challenge
 
-Control de seguridad para repositorios Git que analiza cada commit con un LLM antes de que se cree. Un hook de [pre-commit](https://pre-commit.com/) envía los cambios a un servidor propio, que verifica la identidad del desarrollador, analiza el código con Claude buscando vulnerabilidades del [OWASP Top 10 2021](https://owasp.org/Top10/) y rechaza el commit si las encuentra, con una explicación y una corrección sugerida. Cada análisis aprobado genera un recibo firmado que viaja en el commit, y una GitHub Action verifica en cada pull request que el código que llega al repositorio es exactamente el que se analizó.
+Control de seguridad para repositorios Git que analiza cada commit con un LLM antes de que se cree. Un hook de [pre-commit](https://pre-commit.com/) envía los cambios a un servidor propio, que verifica la identidad del desarrollador, analiza el código con Claude buscando vulnerabilidades del [OWASP Top 10 2021](https://owasp.org/Top10/) y rechaza el commit si las encuentra, con una explicación y una corrección sugerida. Cada análisis aprobado genera un recibo firmado que viaja en el commit.
 
-Evidencia en este repositorio:
+El repositorio vive en un servidor Git propio, [Gitea](https://about.gitea.com/), que verifica los recibos mientras recibe cada push. Un commit sin un recibo válido, o con el recibo de otra persona, se rechaza en cualquier rama y el código nunca queda en el servidor. Saltarse el hook local con `git commit --no-verify` no sirve para subir código sin analizar. Todo corre en Docker y la identidad es la misma cuenta de GitHub (OAuth 2.0) en el análisis y en Gitea.
 
-- [Ejecuciones de la verificación de integridad](https://github.com/sirnaranjo/appsec-genai-challenge/actions)
-- [PR #1](https://github.com/sirnaranjo/appsec-genai-challenge/pull/1): commit hecho con `--no-verify` e intento de desactivar el verificador. Bloqueado, no se pudo integrar.
-- [PR #2](https://github.com/sirnaranjo/appsec-genai-challenge/pull/2): commit con recibo válido. Integrado.
-- [Capturas de la salida real](#capturas) del hook y del servidor Git con `pre-receive`.
+Evidencia:
+
+- [Captura del rechazo real](#capturas) de un push hecho con `--no-verify`, con el motivo y la corrección.
+- [Pruebas automáticas contra Gitea](#rechazo-del-push-en-gitea): push sin recibo, recibo ajeno, merge desde la web, squash, edición web y pull request desde un fork.
+- [Verificación en GitHub](#verificación-en-github) con el mismo verificador: [PR #1](https://github.com/sirnaranjo/appsec-genai-challenge/pull/1) bloqueado por un commit hecho con `--no-verify` y [PR #2](https://github.com/sirnaranjo/appsec-genai-challenge/pull/2) integrado con recibos válidos.
 
 ## Contenido
 
@@ -27,10 +28,24 @@ Evidencia en este repositorio:
 | Componente | Dónde corre | Responsabilidad |
 |---|---|---|
 | Hooks (`hooks/`) | Máquina del desarrollador | Recolectar los cambios en staging, enviarlos, mostrar el resultado y adjuntar el recibo al commit |
-| Servidor de análisis (`server/`) | Servidor propio (FastAPI) | Validar la identidad, aplicar el pre-filtro, consultar al LLM, decidir, firmar el recibo y registrar el análisis |
+| Servidor de análisis (`server/`) | Contenedor `appsec-analizador` (FastAPI) | Validar la identidad, aplicar el pre-filtro, consultar al LLM, decidir, firmar el recibo y registrar el análisis |
 | Claude Sonnet 5.5 | API de Anthropic | Analizar los diffs y reportar hallazgos con un esquema fijo |
-| GitHub OAuth | GitHub | Confirmar la identidad del desarrollador |
-| Verificador (`verifier/`) y GitHub Action | GitHub Actions | Verificar los recibos de cada commit que llega al repositorio |
+| GitHub OAuth | GitHub | Confirmar la identidad del desarrollador, en el análisis y en Gitea |
+| Gitea 1.24.7 | Contenedor `appsec-gitea` | Repositorio, pull requests y control de acceso |
+| Verificador (`verifier/`) | Dentro de Gitea, como hook `pre-receive` | Rechazar el push si algún commit no tiene un recibo válido de quien lo sube |
+| GitHub (opcional) | GitHub.com | Réplica de solo lectura de lo que Gitea aceptó |
+
+```mermaid
+flowchart LR
+    D["Desarrollador<br/>hooks de pre-commit"] -- "diffs + token" --> A["Servidor de análisis<br/>Docker, puerto 8001"]
+    A -- "valida el token" --> O[GitHub OAuth]
+    A -- diffs --> C[Claude]
+    A -- "recibo firmado" --> D
+    D -- "git push" --> T["Gitea<br/>Docker, puerto 3000"]
+    T -- "pre-receive: verifica los recibos" --> T
+    N[Navegador] -- "Iniciar sesión con GitHub" --> T
+    T -. "réplica opcional" .-> H[GitHub]
+```
 
 ### Flujo de un commit
 
@@ -41,7 +56,7 @@ sequenceDiagram
     participant S as Servidor de análisis
     participant G as GitHub OAuth
     participant C as Claude
-    participant R as Repositorio en GitHub
+    participant T as Gitea
     D->>H: git commit
     H->>S: POST /analyze (diffs, tree, tree del padre, token)
     S->>G: ¿token válido y emitido para esta app?
@@ -52,25 +67,26 @@ sequenceDiagram
     S->>S: decide, firma el recibo y registra el análisis
     S-->>H: resultado + recibo
     H->>H: commit-msg agrega AppSec-Receipt al mensaje
-    D->>R: git push y pull request
-    R->>R: la Action verifica los recibos con la llave pública
+    D->>T: git push
+    T->>T: pre-receive verifica los recibos con la llave pública y el usuario del push
+    T-->>D: push aceptado, o rechazado con el motivo
 ```
 
 ### Qué se ejecuta en cada lugar y por qué
 
-El diseño parte de una regla: no confiar en lo que controla el desarrollador. Todo lo que corre en su máquina puede modificarse, así que ahí solo se recolecta y se muestra información. Las decisiones se toman en el servidor y se verifican en el repositorio.
+El diseño parte de una regla: no confiar en lo que controla el desarrollador. Todo lo que corre en su máquina puede modificarse, así que ahí solo se recolecta y se muestra información. Las decisiones se toman en el servidor de análisis y se verifican en el servidor Git.
 
-| Tarea | Cliente | Servidor | Claude | GitHub |
-|---|:---:|:---:|:---:|:---:|
-| Recolectar cambios y calcular huellas (`tree`, `base`) | x | | | |
-| Validar tamaño | x | x | | |
-| Guardar el token del desarrollador | x | | | |
-| Validar identidad y autorización | | x | | x |
-| Pre-filtro determinístico | | x | | |
-| Detectar vulnerabilidades | | | x | |
-| Decidir aprobar o rechazar | | x | | |
-| Firmar el recibo y registrar el análisis | | x | | |
-| Verificar los commits que llegan al repositorio | | | | x |
+| Tarea | Cliente | Servidor de análisis | Claude | GitHub | Gitea |
+|---|:---:|:---:|:---:|:---:|:---:|
+| Recolectar cambios y calcular huellas (`tree`, `base`) | x | | | | |
+| Validar tamaño | x | x | | | |
+| Guardar el token del desarrollador | x | | | | |
+| Validar identidad y autorización | | x | | x | x |
+| Pre-filtro determinístico | | x | | | |
+| Detectar vulnerabilidades | | | x | | |
+| Decidir aprobar o rechazar | | x | | | |
+| Firmar el recibo y registrar el análisis | | x | | | |
+| Verificar los commits que llegan al repositorio | | | | | x |
 
 Claude solo recibe el prompt, los diffs y sus rutas. No recibe el token, la identidad del desarrollador ni metadatos del repositorio.
 
@@ -95,33 +111,50 @@ AppSec-Receipt: eyJhbGciOiJFZERTQSIsImtpZCI6ImVhMTIzNTdiZDQ3YzU4OTMiLCJ0eXAiOiJK
 
 El verificador (`verifier/recibos.py`) solo necesita la llave pública y comprueba, para cada commit:
 
-1. Que tenga recibo, o que sea un merge sin contenido propio (la combinación automática de sus padres, como el que crea el botón Merge de GitHub).
+1. Que tenga recibo, o que sea un merge sin contenido propio (la combinación automática de sus padres, como el que crea el botón Merge de Gitea).
 2. La firma del servidor. Solo acepta el algoritmo `EdDSA`.
 3. Que el análisis haya sido aprobado.
 4. Que el `tree` del recibo sea el del commit: el contenido no cambió después del análisis.
 5. Que la `base` sea el `tree` del padre real: detecta el uso de `--amend`.
 6. Que los diffs que vio el LLM sean exactamente los cambios del commit y que no falte ningún archivo de código. Para eso el verificador regenera los diffs con las mismas opciones fijas que usa el hook (`OPCIONES_DIFF`), que eliminan las diferencias de configuración entre equipos.
 
-### Verificación en el repositorio
+### Verificación en el servidor Git
 
-`.github/workflows/integridad.yml` ejecuta el verificador en cada pull request y en cada push a `main`:
+GitHub.com no permite ejecutar lógica propia mientras recibe un push: una GitHub Action verifica después, cuando el código ya está en una rama. Por eso el repositorio vive en Gitea, que sí ejecuta hooks del lado del servidor. `verifier/pre_receive.py` corre como hook `pre-receive` mientras Gitea recibe el push y, para cada rama, revisa todos los commits que se incorporan a ella:
 
-- Usa `pull_request_target`: el workflow y el verificador que se ejecutan son los de la rama base, así que un pull request no puede modificarlos para que la verificación pase.
-- Los commits del pull request se leen como datos; su código nunca se ejecuta.
-- La llave pública viene de la variable del repositorio `APPSEC_PUBLIC_KEY`, que un pull request no puede cambiar.
-- Permisos de solo lectura y sin credenciales persistidas.
+1. **Integridad**: cada commit debe tener un recibo válido, o ser un merge sin contenido propio. Se aplica también a los commits que ya existen en otra referencia del servidor, como los de un pull request desde un fork.
+2. **Identidad**: los commits que el servidor recibe por primera vez deben tener un recibo del usuario autenticado que hace el push (`GITEA_PUSHER_NAME`). Los que ya estaban en el servidor no lo exigen: así otra persona puede integrar un pull request desde la web.
+3. **Filtros**: se leen de la configuración ya aceptada en el servidor, no de la del push, para que un push no pueda agregar sus propias exclusiones.
 
-Con el ruleset de `main` configurado (sección 2), un commit sin recibo válido no puede entrar a la rama protegida.
+Si un commit falla, ninguna rama del push se actualiza y el desarrollador recibe el commit, el motivo, la causa probable y cómo corregirlo. Las operaciones que Gitea hace por su cuenta también pasan por el hook: el botón Merge, el editor web y la copia de los commits de un fork al abrir un pull request.
 
-### Rechazo del push en un servidor Git propio
+`scripts/configurar_gitea.py` deja el repositorio listo:
 
-GitHub.com no permite ejecutar lógica propia mientras recibe un push, por lo que la Action detecta y contiene: el código sin análisis puede llegar a una rama, pero no a `main`. En un servidor Git que permita hooks (GitHub Enterprise Server, GitLab autoadministrado, Gitea o un repositorio propio), `verifier/pre_receive.py` aplica el mismo verificador durante la recepción del push: si un commit nuevo no tiene un recibo válido, ninguna rama se actualiza y el código no llega al remoto.
+- Solo merge commits: squash y rebase crean commits nuevos sin recibo, que el hook rechazaría.
+- `main` protegida contra force push y borrado.
+- Escritura solo para el equipo `desarrolladores`.
 
-- Verifica todos los commits nuevos de cada rama del push, incluidas las ramas nuevas. Un commit inválido rechaza el push completo.
-- Lee los filtros del hook desde la configuración ya aceptada en el servidor, no desde la del push, para que un push no pueda agregar sus propias exclusiones.
-- Puede exigir que los recibos pertenezcan al usuario autenticado que hace el push, a partir de la variable que exponga cada servidor (por ejemplo `GITEA_PUSHER_NAME` o `GL_USERNAME`).
+### Identidad con OAuth 2.0
 
-[`docs/gitea.md`](docs/gitea.md) describe una instalación completa con Gitea en Docker, login con GitHub y el hook activo en todas las ramas.
+Una sola OAuth App de GitHub cubre los dos usos:
+
+- **Análisis**: el cliente obtiene el token con el Device Flow (`python hooks/login.py`). El servidor de análisis lo valida contra GitHub y el usuario queda firmado en el recibo (`sub`).
+- **Gitea**: el inicio de sesión web usa la misma OAuth App. Las cuentas solo se crean iniciando sesión con GitHub y reciben el mismo nombre de usuario.
+
+Como los dos nombres coinciden, el hook compara el usuario del recibo con el que hace el push. Un desarrollador no puede subir código con el recibo de otra persona.
+
+### Secretos
+
+- La llave privada de firma solo se monta en el contenedor de análisis, de solo lectura.
+- Gitea recibe solo la llave pública y el verificador, ambos de solo lectura. Un push no puede cambiar el verificador ni la llave que se usan para revisarlo.
+- `.dockerignore` deja fuera de las imágenes el `.env`, `keys/` y `data/`.
+- La contraseña del administrador de Gitea se genera al azar y se guarda en `data/gitea-administrador.txt`, fuera del control de versiones.
+
+### Réplica y verificación en GitHub
+
+Gitea puede replicar automáticamente a un repositorio de GitHub cada push aceptado (sección 2). La réplica es de solo lectura para el equipo y mantiene la visibilidad en GitHub.
+
+`.github/workflows/integridad.yml` ejecuta el mismo verificador en GitHub Actions como capa adicional. Usa `pull_request_target`, de modo que un pull request no puede modificar el workflow ni el verificador, y lee la llave pública de la variable del repositorio `APPSEC_PUBLIC_KEY`.
 
 ### Escalabilidad, rendimiento y fricción
 
@@ -147,26 +180,31 @@ Para escalar:
 - El servidor no guarda estado entre solicitudes, así que se puede replicar detrás de un balanceador. El registro de auditoría pasaría de SQLite a una base de datos compartida y la caché de tokens a un almacén como Redis.
 - Los commits grandes podrían analizarse de forma asíncrona: el hook encola el análisis y el desarrollador recibe el resultado por otro canal. La latencia medida (hasta 60 segundos en casos aislados) lo justifica para esos casos.
 - El modelo y el nivel de esfuerzo se configuran por variables de entorno, lo que permite usar un modelo más económico como primer filtro o uno más capaz para revisiones asíncronas.
+- El hook `pre-receive` no llama al LLM ni a la red: solo verifica firmas y recalcula diffs con Git, así que su costo crece con el número de commits del push y no con el tráfico del servidor de análisis.
+- Gitea admite bases de datos externas (PostgreSQL o MySQL) y varias réplicas detrás de un balanceador. El hook se instala por repositorio, o para todos con la plantilla de hooks de Gitea.
 
 ### Monitoreo de evasiones
 
-Ningún control en la máquina del desarrollador es definitivo. Estas son las evasiones conocidas y cómo se detecta cada una:
+Ningún control en la máquina del desarrollador es definitivo. Estas son las evasiones conocidas y cómo se detecta cada una. Salvo la última, todas terminan con el push rechazado por Gitea:
 
 | Evasión | Detección |
 |---|---|
-| `git commit --no-verify` | El hook post-commit avisa en el momento. El verificador falla: el commit no tiene recibo |
-| Desinstalar o desactivar los hooks | El commit llega sin recibo y el verificador falla |
+| `git commit --no-verify` | El hook post-commit avisa en el momento. El commit no tiene recibo |
+| Desinstalar o desactivar los hooks | El commit llega sin recibo |
+| Subir a una rama distinta de `main` | El hook revisa todas las ramas, incluidas las nuevas |
+| Usar el recibo de otra persona | El usuario del recibo no es el que hace el push |
 | Modificar el cliente para que siempre apruebe | No puede generar un recibo con una firma válida |
 | Modificar el cliente para enviar diffs falsos | La huella del contenido no coincide con los cambios reales del commit |
 | Omitir archivos en el análisis | El verificador encuentra archivos de código cambiados que no figuran en el recibo |
 | Copiar el recibo de otro commit | El `tree` no coincide |
 | Editar un recibo o inventarlo | La firma no es válida |
 | `git commit --amend` para obtener un recibo sobre código no analizado | La `base` no coincide con el padre real. El hook post-commit avisa en el momento |
-| `rebase`, `cherry-pick` o edición en la web de GitHub | Crean commits sin recibo válido |
+| `rebase`, `cherry-pick`, squash o edición en la web de Gitea | Crean commits sin recibo válido |
 | Merge con contenido agregado a mano | No es una combinación automática de sus padres y no tiene recibo |
-| Agregar archivos al `exclude` de `.pre-commit-config.yaml` | El verificador lee los filtros de la configuración de la rama base, no de la del pull request |
-| Modificar el workflow o el verificador en un pull request | `pull_request_target` ejecuta la versión de la rama base |
-| Reemplazar la llave pública | Se lee de una variable del repositorio |
+| Pull request desde un fork con commits sin recibo | Gitea copia esos commits al repositorio al abrir el PR y el hook rechaza la copia |
+| Force push o borrado de `main` | Protección de rama |
+| Agregar archivos al `exclude` de `.pre-commit-config.yaml` | El hook lee los filtros de la configuración ya aceptada en el servidor |
+| Modificar el verificador o la llave pública en un push | Gitea usa su propia copia, montada de solo lectura |
 | Instrucciones dentro del código para engañar al LLM | Pre-filtro determinístico y reglas del prompt (sección 4) |
 
 Señales para monitorear en el servidor:
@@ -175,12 +213,14 @@ Señales para monitorear en el servidor:
 - Commits en `main` cuyo `tree` no aparece en el registro de auditoría.
 - Advertencias de contradicción: el pre-filtro detectó un patrón peligroso y el LLM no lo reportó.
 - Análisis rechazados por "Manipulacion del analisis", con el usuario que los envió.
+- Pushes rechazados por el hook, con el usuario y el motivo, en el registro de Gitea (`docker logs appsec-gitea`).
 
 ### Alternativas evaluadas
 
 | Alternativa | Qué aporta | Por qué no se implementó |
 |---|---|---|
-| Gitea como servidor intermedio con réplica a GitHub | Rechazo del push con `verifier/pre_receive.py` y GitHub como copia de solo lectura | Requiere operar un servidor adicional. Implementada como alternativa en [`docs/gitea.md`](docs/gitea.md) |
+| GitHub.com con GitHub Actions y rulesets | Sin infraestructura adicional y evidencia pública en la web | Fue la primera versión. La verificación corre después del push: el código sin análisis llega a las ramas, aunque no pueda entrar a `main`. Se conserva como capa adicional sobre la réplica |
+| Gitea Cloud | Gitea administrado, sin Docker | El hook necesita Python y el verificador dentro del servidor, y un servicio administrado no permite instalar software propio |
 | GitLab.com | Bloquea merges con "Pipelines must succeed" incluso en repositorios privados del plan gratuito | Los tokens OAuth vencen cada 2 horas y requerir aprobación de Code Owners es de pago |
 | Evaluación asíncrona con portal | Sin espera en el commit | El modo síncrono da la respuesta inmediata en el momento del commit |
 | Firma de commits del desarrollador (GPG o SSH) | Refuerza la identidad del autor | No prueba que el código fue analizado. Queda como complemento opcional |
@@ -191,16 +231,19 @@ Señales para monitorear en el servidor:
 
 ### Requisitos
 
-- Python 3.12 o superior
+- Docker con Docker Compose (Docker Desktop en Windows y macOS)
+- Python 3.12 o superior, para los hooks del cliente y los scripts
 - Git 2.38 o superior
 - Una cuenta de GitHub
 - Una API key de Anthropic con créditos
 
 ### Instalación
 
+Clonar el repositorio, entrar en su carpeta y crear el entorno virtual:
+
 ```bash
-git clone https://github.com/sirnaranjo/appsec-genai-challenge.git
-cd appsec-genai-challenge
+git clone <URL del repositorio>
+cd <carpeta del repositorio>
 python -m venv .venv
 ```
 
@@ -219,88 +262,114 @@ Instalar las dependencias (cliente, servidor, verificador y pruebas):
 pip install -r requirements-dev.txt
 ```
 
-### Servidor de análisis
+### OAuth App de GitHub
+
+Crear una OAuth App en <https://github.com/settings/applications/new>. La misma aplicación sirve para el análisis (Device Flow) y para iniciar sesión en Gitea:
+
+- Homepage URL: `http://localhost:3000`
+- Authorization callback URL: `http://localhost:3000/user/oauth2/github/callback`. La usa Gitea; el Device Flow no la necesita.
+- Marcar **Enable Device Flow**.
+- Copiar el Client ID y generar un client secret.
+
+### Variables y llaves
 
 1. Copiar `.env.example` como `.env` y completar los valores:
 
 | Variable | Descripción |
 |---|---|
-| `APPSEC_SERVER_URL` | URL del servidor, usada por el cliente. Por defecto `http://127.0.0.1:8000` |
+| `APPSEC_SERVER_URL` | URL del servidor de análisis, usada por el cliente: `http://127.0.0.1:8001` |
 | `ANTHROPIC_API_KEY` | API key de Anthropic |
 | `ANTHROPIC_MODEL` | Modelo. Por defecto `claude-sonnet-5-5` |
 | `ANTHROPIC_EFFORT` | Opcional. Esfuerzo del modelo: `low`, `medium` (por defecto) o `high` |
 | `PROMPT_VERSION` | Opcional. Versión del prompt. Por defecto `security_review_v3` |
 | `SEVERIDAD_BLOQUEO` | Opcional. Severidad mínima que bloquea el commit. Por defecto `MEDIA` |
 | `GITHUB_OAUTH_CLIENT_ID` | Client ID de la OAuth App |
-| `GITHUB_OAUTH_CLIENT_SECRET` | Client secret de la OAuth App. Solo existe en el servidor |
-| `USUARIOS_PERMITIDOS` | Usuarios de GitHub autorizados, separados por coma. Si está vacío no se autoriza a nadie |
-| `RECEIPT_PRIVATE_KEY_PATH` | Llave privada de firma. Por defecto `keys/receipt_private.pem` |
-| `DATABASE_PATH` | Registro de auditoría. Por defecto `data/appsec.db` |
+| `GITHUB_OAUTH_CLIENT_SECRET` | Client secret de la OAuth App. Solo lo reciben el servidor de análisis y Gitea |
+| `USUARIOS_PERMITIDOS` | Usuarios de GitHub autorizados para el análisis, separados por coma. Si está vacío no se autoriza a nadie |
+| `GITHUB_ESPEJO_URL`, `GITHUB_ESPEJO_TOKEN` | Opcionales. Repositorio de GitHub para la réplica y un token con escritura solo sobre ese repositorio |
 
-2. Crear una OAuth App en <https://github.com/settings/applications/new>:
-   - Homepage URL: la URL del repositorio.
-   - Authorization callback URL: `http://127.0.0.1:8000/auth/callback`. El formulario la exige, pero el Device Flow no la usa.
-   - Marcar **Enable Device Flow**.
-   - Copiar el Client ID y generar un client secret.
+En Docker, la llave privada y el registro de auditoría tienen rutas fijas dentro del contenedor (`docker-compose.yml`); `RECEIPT_PRIVATE_KEY_PATH` y `DATABASE_PATH` solo se usan al ejecutar el servidor fuera de Docker.
 
-3. Generar el par de llaves de firma:
+2. Generar el par de llaves de firma. El script no sobrescribe una llave existente y la carpeta `keys/` está en `.gitignore`:
 
 ```bash
 python scripts/generar_llaves.py
 ```
 
-El script no sobrescribe una llave existente. La carpeta `keys/` está en `.gitignore`.
+### Servidor de análisis y Gitea
 
-4. Iniciar el servidor desde la raíz del repositorio:
+Construir e iniciar los dos contenedores:
 
 ```bash
-uvicorn server.main:app --port 8000
+docker compose up -d --build
 ```
 
-La documentación de la API queda en `http://127.0.0.1:8000/docs`.
+| Contenedor | Dirección | Contenido |
+|---|---|---|
+| `appsec-analizador` | `http://127.0.0.1:8001` (API en `/docs`) | Servidor de análisis, con la llave privada |
+| `appsec-gitea` | `http://localhost:3000` | Gitea con Python, el verificador y la llave pública |
+
+El servidor de análisis se publica en el puerto 8001 para poder convivir con otro servidor local en el 8000.
+
+Configurar Gitea: administrador, login con GitHub, organización `appsec`, equipo `desarrolladores`, repositorio `proyecto` con el contenido actual de este repositorio, hook `pre-receive`, solo merge commits, `main` protegida y, si está configurada, la réplica a GitHub. El script se puede ejecutar de nuevo sin efectos duplicados:
+
+```bash
+python scripts/configurar_gitea.py
+```
+
+El historial existente se sube antes de activar el hook, porque sus commits no tienen recibos. La contraseña del administrador queda en `data/gitea-administrador.txt`.
 
 ### Cliente (cada desarrollador)
 
-Instalar los hooks. Se instalan cuatro: `pre-commit`, `pre-merge-commit`, `commit-msg` y `post-commit`.
+1. Entrar a <http://localhost:3000> con **Iniciar sesión con GitHub**. Así se crea la cuenta en Gitea, con el mismo usuario de GitHub.
+2. Recibir permiso de escritura. Lo ejecuta quien administra Gitea:
+
+```bash
+python scripts/configurar_gitea.py --autorizar <usuario de GitHub>
+```
+
+3. Crear un token de acceso en Gitea, en *Configuración → Aplicaciones*, con permiso de lectura y escritura sobre repositorios. Es la contraseña que pide `git push`.
+4. Instalar los hooks. Se instalan cuatro: `pre-commit`, `pre-merge-commit`, `commit-msg` y `post-commit`.
 
 ```bash
 pre-commit install
 ```
 
-Iniciar sesión con GitHub. Muestra un código y abre el navegador para autorizar la aplicación; el token se guarda en el almacén de credenciales del sistema operativo.
+5. Iniciar sesión para el análisis. Muestra un código y abre el navegador para autorizar la aplicación; el token se guarda en el almacén de credenciales del sistema operativo.
 
 ```bash
 python hooks/login.py
 ```
 
-### Repositorio en GitHub
+6. Agregar el remoto de Gitea:
 
-1. **Variable de la llave pública**: en *Settings → Secrets and variables → Actions → Variables*, crear `APPSEC_PUBLIC_KEY` con el contenido completo de `keys/receipt_public.pem`.
-2. **Ruleset para `main`**: en *Settings → Rules → Rulesets*, crear un ruleset de rama sobre la rama por defecto, activo y sin lista de excepciones, con:
-   - Restrict deletions
-   - Require a pull request before merging
-   - Require status checks to pass: `Verificar recibos de integridad`
-   - Block force pushes
+```bash
+git remote add gitea http://localhost:3000/appsec/proyecto.git
+```
 
-   No activar *Require linear history*: impide los merge commits y los recibos dejarían de coincidir. En un equipo, activar también *Required approvals* y *Require review from Code Owners* sobre `hooks/`, `verifier/`, `.github/` y `.pre-commit-config.yaml`.
-3. **Estrategia de merge**: en *Settings → General → Pull Requests*, dejar activo solo *Allow merge commits*. Squash y rebase crean commits nuevos cuyos recibos no coinciden.
-4. **Permisos de las Actions**: en *Settings → Actions → General*, seleccionar *Read repository contents and packages permissions*.
-5. **Escaneo de secretos**: activar *Secret Protection* y *Push protection*.
+### Réplica opcional a GitHub
 
-### Probarlo en un fork propio
+Con `GITHUB_ESPEJO_URL` y `GITHUB_ESPEJO_TOKEN` en el `.env`, `configurar_gitea.py` configura una réplica automática: cada push aceptado en Gitea se copia a ese repositorio. Para usar también la verificación en GitHub Actions sobre la réplica, crear en ese repositorio la variable `APPSEC_PUBLIC_KEY` (*Settings → Secrets and variables → Actions → Variables*) con el contenido de `keys/receipt_public.pem`.
 
-Cada instalación tiene su propia llave de firma: los recibos de un servidor solo son válidos donde se configuró su llave pública. Para probar la solución completa en un fork:
+### Evaluación rápida
 
-1. Hacer un fork, clonarlo y seguir la instalación anterior con una OAuth App, una API key y un par de llaves propios.
-2. En el fork, activar las Actions (vienen desactivadas en los forks) y crear la variable `APPSEC_PUBLIC_KEY` con la llave pública propia.
-3. Configurar el ruleset y la estrategia de merge.
-4. Trabajar con ramas y pull requests: los commits con recibo pasan la verificación y los hechos con `--no-verify` quedan bloqueados.
+Para comprobar solo el rechazo de los push no hacen falta la OAuth App, la API key ni iniciar sesión. Las pruebas automáticas crean un repositorio y usuarios temporales en Gitea, firman los recibos con la llave local y los eliminan al terminar:
+
+```bash
+cp .env.example .env
+python scripts/generar_llaves.py
+docker compose up -d --build
+python scripts/configurar_gitea.py
+RUN_GITEA_TESTS=1 pytest tests/test_gitea.py -v
+```
+
+En PowerShell: `Copy-Item .env.example .env` en lugar de `cp`, y `$env:RUN_GITEA_TESTS = "1"` antes de ejecutar `pytest`. Sin OAuth App, `configurar_gitea.py` omite el login con GitHub e indica que lo omitió.
 
 ---
 
 ## 3. Guía de uso
 
-Con el servidor en ejecución y la sesión iniciada, el análisis ocurre en cada commit:
+Con los contenedores en ejecución y la sesión iniciada, el análisis ocurre en cada commit:
 
 ```bash
 git add app.py
@@ -330,6 +399,34 @@ Analisis de seguridad con IA.............................................Failed
 Análisis <id> · <usuario de GitHub> · <modelo> · <versión del prompt>
 ```
 
+### Subir los cambios
+
+```bash
+git push gitea mi-rama
+```
+
+Gitea pide usuario y contraseña la primera vez: el usuario de GitHub y el token creado en Gitea. Si todos los commits tienen un recibo válido del mismo usuario, el push se acepta y Gitea muestra una línea `OK` por commit. Si alguno falla, se rechaza el push completo con el motivo y la corrección. Salida real de un commit hecho con `--no-verify` y subido a la rama `funcionalidad`:
+
+```
+remote: FALLA  4d9714e3  el commit no tiene recibo de análisis  (Agrega comandos.py)
+remote:
+remote: PUSH RECHAZADO por el control de seguridad: 1 commit(s) sin un recibo de análisis válido.
+remote:
+remote:   Commit:  4d9714e3  Agrega comandos.py
+remote:   Motivo:  el commit no tiene recibo de análisis
+remote:   Causa:   El commit no pasó por el análisis de seguridad: se hizo con --no-verify, sin los hooks instalados o con rebase, cherry-pick o squash.
+remote:
+remote: Ninguna rama se actualizó. Para corregirlo, rehacer los commits rechazados pasando por el análisis.
+remote: Si es solo el último commit:
+remote:     git reset --soft HEAD~1
+remote:     git commit -m "mensaje"
+remote: Y volver a hacer el push.
+remote:
+ ! [remote rejected] HEAD -> funcionalidad (pre-receive hook declined)
+```
+
+Los pull requests se crean y se integran en la web de Gitea con el botón **Merge**. Quien integra puede ser otra persona del equipo.
+
 ### Ejecución manual
 
 Analizar archivos concretos sin hacer commit:
@@ -353,28 +450,26 @@ python scripts/demo.py
 python scripts/demo.py vulnerable_app.py
 ```
 
-### Demostración del rechazo del push
+### Demostración del rechazo del push sin Docker
 
-`scripts/demo_pre_receive.py` crea un servidor Git local (un repositorio "desnudo" con `verifier/pre_receive.py` instalado como hook) y un clon de trabajo. Intenta subir un commit hecho con `--no-verify`, que el servidor rechaza, y uno que pasó por el análisis, que el servidor acepta:
+`scripts/demo_pre_receive.py` muestra el mismo hook sin Gitea: crea un servidor Git local (un repositorio "desnudo" con `verifier/pre_receive.py` instalado como hook) y un clon de trabajo. Intenta subir un commit hecho con `--no-verify`, que el servidor rechaza, y uno que pasó por el análisis, que el servidor acepta:
 
 ```bash
 python scripts/demo_pre_receive.py
 ```
 
-Para instalarlo en un servidor Git propio, el archivo `hooks/pre-receive` del repositorio en el servidor ejecuta el verificador con la llave pública:
+El hook sirve en cualquier servidor Git que admita hooks del lado del servidor (GitHub Enterprise Server, GitLab autoadministrado o un repositorio propio). Necesita una copia de `verifier/`, las dependencias de `requirements-verifier.txt` y la llave pública. `--usuario-desde` indica la variable con el usuario que hace el push en cada servidor (por ejemplo `GL_USERNAME` en GitLab):
 
 ```sh
 #!/bin/sh
-exec python3 /opt/appsec/verifier/pre_receive.py --llave /opt/appsec/receipt_public.pem
+exec python3 /opt/appsec/verifier/pre_receive.py --llave /opt/appsec/receipt_public.pem --usuario-desde GITEA_PUSHER_NAME
 ```
-
-El servidor necesita una copia de `verifier/` y las dependencias de `requirements-verifier.txt`.
 
 ### Verificar recibos localmente
 
 ```bash
 python verifier/verificar.py                      # último commit
-python verifier/verificar.py origin/main..HEAD    # commits pendientes de subir
+python verifier/verificar.py gitea/main..HEAD     # commits pendientes de subir
 ```
 
 ### Sesión
@@ -396,16 +491,36 @@ Las pruebas que llaman a Claude tienen costo y solo se ejecutan si se activan:
 RUN_LLM_TESTS=1 pytest tests/test_deteccion_llm.py
 ```
 
-En PowerShell: `$env:RUN_LLM_TESTS = "1"` antes de ejecutar `pytest`.
+Las pruebas contra Gitea necesitan los contenedores en ejecución y `configurar_gitea.py` ejecutado. Crean un repositorio y usuarios temporales y los eliminan al terminar:
+
+```bash
+RUN_GITEA_TESTS=1 pytest tests/test_gitea.py
+```
+
+En PowerShell: `$env:RUN_LLM_TESTS = "1"` o `$env:RUN_GITEA_TESTS = "1"` antes de ejecutar `pytest`.
+
+### Contenedores
+
+```bash
+docker compose stop      # apagar sin borrar datos
+docker compose start     # encender de nuevo
+docker logs appsec-gitea # registro de Gitea, incluidos los pushes rechazados
+```
+
+Los cambios en `verifier/` se aplican en el siguiente push, sin reiniciar. Los cambios en `server/` requieren `docker compose up -d --build analizador`, y los del `.env`, `docker compose up -d --force-recreate analizador`. Usuarios, repositorios y el registro de análisis se guardan en volúmenes de Docker; `docker compose down -v` los elimina.
 
 ### Situaciones frecuentes
 
 | Situación | Qué hacer |
 |---|---|
 | "No hay una sesión iniciada" | `python hooks/login.py` |
-| "No fue posible conectar con el servidor de análisis" | Iniciar el servidor. Sin análisis el commit no se aprueba |
+| "No fue posible conectar con el servidor de análisis" | Iniciar los contenedores y revisar que `APPSEC_SERVER_URL` sea `http://127.0.0.1:8001`. Sin análisis el commit no se aprueba |
 | Aviso post-commit por `--amend` | `git reset --soft HEAD~1` y volver a hacer `git commit` |
 | Aviso post-commit por `--no-verify` | Igual que el anterior: el commit se rehace pasando por el análisis |
+| Push rechazado | Seguir la corrección que muestra el mensaje: rehacer los commits rechazados pasando por el análisis |
+| Push rechazado porque el recibo pertenece a otra persona | Cada quien sube sus propios commits. Para integrar el trabajo de otra persona, usar un pull request |
+| Gitea responde 403 al hacer push | El usuario no tiene permiso de escritura: `python scripts/configurar_gitea.py --autorizar <usuario>` |
+| Gitea no muestra "Iniciar sesión con GitHub" | Completar la OAuth App en el `.env` y volver a ejecutar `python scripts/configurar_gitea.py` |
 | Falso positivo | Se puede revisar con el id del análisis en el registro del servidor. Los hallazgos de severidad BAJA no bloquean |
 
 ---
@@ -464,6 +579,9 @@ El mensaje de usuario envuelve los cambios en una etiqueta con una marca aleator
 - **Autorización**: además de autenticarse, el usuario debe estar en `USUARIOS_PERMITIDOS`. Vacío equivale a nadie.
 - **Caché** de 5 minutos con el hash del token, nunca el token.
 - Respuestas 401, 403 y 503 según el caso.
+- **Gitea con la misma OAuth App**: inicio de sesión web con OAuth 2.0 (Authorization Code). Gitea no admite registro con contraseña: las cuentas se crean al iniciar sesión con GitHub y toman el mismo nombre de usuario, que el hook compara con el del recibo.
+- **Dos autorizaciones independientes**: `USUARIOS_PERMITIDOS` controla quién puede obtener análisis y el equipo `desarrolladores` de Gitea controla quién puede escribir en el repositorio.
+- **Token de Gitea para `git push`**: las cuentas creadas con GitHub no tienen contraseña. El token se limita a repositorios y se revoca desde Gitea.
 
 ### Decisiones generales
 
@@ -471,7 +589,9 @@ El mensaje de usuario envuelve los cambios en una etiqueta con una marca aleator
 - **El servidor no confía en el cliente**: vuelve a validar formato y tamaños de todo lo que recibe.
 - **El LLM no decide**: reporta hallazgos y el servidor aplica la política de severidad.
 - **Registro de auditoría** en SQLite de todos los análisis, incluidos los rechazados, con usuario verificado, autor declarado en Git, hallazgos y recibo.
-- **Dependencias con versión fija**.
+- **Dependencias con versión fija**, incluidas las imágenes de Docker (`gitea/gitea:1.24.7`, `python:3.12-slim`).
+- **El servidor Git decide, no el cliente**: el hook local da la respuesta rápida, pero la regla se aplica en Gitea, donde el desarrollador no tiene control.
+- **Configuración reproducible**: Gitea se configura por variables de entorno y con un script que se puede repetir, sin pasos manuales en la web salvo el inicio de sesión y el token.
 
 ---
 
@@ -487,7 +607,11 @@ Salida real del hook, generada con análisis de Claude sobre los archivos de `ex
 
 ![Intento de prompt injection](docs/rechazo-manipulacion.svg)
 
-Servidor Git con `verifier/pre_receive.py`, salida de `scripts/demo_pre_receive.py`:
+Gitea rechaza el push de un commit hecho con `--no-verify` (push real al Gitea de Docker Compose):
+
+![Gitea rechaza un push hecho con --no-verify](docs/gitea-rechazo.svg)
+
+El mismo hook en un servidor Git local, sin Docker, salida de `scripts/demo_pre_receive.py`:
 
 ![Servidor Git con hook pre-receive](docs/pre-receive.svg)
 
@@ -540,7 +664,37 @@ Resultados de `scripts/demo.py` con el prompt v3:
 
 Durante el desarrollo se probó un archivo real de autenticación de 760 líneas. Con el prompt v1, una de seis ejecuciones lo rechazó con un hallazgo de severidad MEDIA sobre una función de otro archivo que el modelo no podía ver: supuso el peor caso para un código que en realidad sí validaba el escenario. La v2 agregó dos reglas: asumir que el código externo hace lo que indican su nombre y su documentación, y reportar como BAJA (advertencia sin bloqueo) las sospechas que no se pueden confirmar. Con la v2, las cinco ejecuciones siguientes aprobaron el archivo; dos de ellas con advertencias razonables de defensa en profundidad. La batería de ejemplos siguió dando los mismos resultados.
 
-### Integridad en GitHub
+### Rechazo del push en Gitea
+
+`tests/test_gitea.py`, contra el Gitea de Docker Compose con usuarios reales de Gitea:
+
+| Prueba | Resultado |
+|---|---|
+| Push de un commit hecho con `--no-verify` | Rechazado. La rama remota no cambió |
+| Push de un commit con recibo propio | Aceptado |
+| Push de un commit con el recibo de otra persona | Rechazado: el recibo pertenece a otro usuario |
+| Merge desde la web hecho por otra persona | Aceptado: los commits ya estaban verificados y el merge no agrega contenido |
+| Squash merge | No permitido por la configuración del repositorio |
+| Commit creado desde el editor web | Rechazado: no tiene recibo |
+| Pull request desde un fork con commits sin recibo | No se puede crear: Gitea copia los commits al repositorio y el hook rechaza la copia |
+
+`tests/test_pre_receive.py`, con el mismo hook en un servidor Git local:
+
+| Prueba | Resultado |
+|---|---|
+| Push de un commit hecho con `--no-verify` | Rechazado, con la causa y la corrección |
+| Push de un commit analizado y aprobado | Aceptado |
+| Push con un commit válido y otro sin recibo | Rechazado completo |
+| Rama nueva con un commit sin recibo | Rechazada |
+| Push que agrega un archivo al `exclude` y no lo envía al análisis | Rechazado: el servidor usa su propia configuración |
+| Recibo de otra persona | Rechazado |
+| Otra persona integra una rama ya verificada | Aceptado |
+| Merge de un commit que llegó al servidor sin pasar por el hook | Rechazado |
+| Borrado de una rama | Aceptado: no agrega código |
+
+### Verificación en GitHub
+
+El mismo verificador se probó en GitHub Actions, en la primera versión de la solución:
 
 | Prueba | Resultado |
 |---|---|
@@ -549,34 +703,29 @@ Durante el desarrollo se probó un archivo real de autenticación de 760 líneas
 | [PR #1](https://github.com/sirnaranjo/appsec-genai-challenge/pull/1) con un commit hecho con `--no-verify` | Verificación fallida: el commit no tiene recibo. Merge bloqueado |
 | Commit en el mismo PR que modifica el verificador para que siempre apruebe | La verificación siguió fallando: se ejecutó la versión de `main` |
 
-### Rechazo del push con `pre-receive`
-
-| Prueba | Resultado |
-|---|---|
-| Push de un commit hecho con `--no-verify` | Rechazado por el servidor. La rama remota no cambió |
-| Push de un commit analizado y aprobado | Aceptado |
-| Push con un commit válido y otro sin recibo | Rechazado completo |
-| Rama nueva con un commit sin recibo | Rechazada |
-| Push que agrega un archivo al `exclude` y no lo envía al análisis | Rechazado: el servidor usa su propia configuración |
-| Borrado de una rama | Aceptado: no agrega código |
+La diferencia con Gitea: en GitHub el commit del PR #1 llegó a su rama y quedó visible en el repositorio; en Gitea ese push se rechaza y el código nunca llega al servidor.
 
 ### Pruebas automáticas
 
-- 153 pruebas sin costo: contrato de la API, autenticación, Device Flow, armado del prompt, pre-filtro (incluidos los 16 ataques y una prueba que comprueba que el código del proyecto no dispara el pre-filtro), presentación, recolección de cambios en Git, firma de recibos, ataques al recibo en repositorios temporales (sin recibo, copiado, alterado, firmado con otra llave, algoritmo `none`, lavado con `--amend`, diffs falsos, archivos omitidos y merges) y el hook `pre-receive` con un servidor Git local.
-- 19 pruebas con Claude: los tres ejemplos y los 16 ataques.
+- 161 pruebas sin costo: contrato de la API, autenticación, Device Flow, armado del prompt, pre-filtro (incluidos los 16 ataques y una prueba que comprueba que el código del proyecto no dispara el pre-filtro), presentación, recolección de cambios en Git, firma de recibos, ataques al recibo en repositorios temporales (sin recibo, copiado, alterado, firmado con otra llave, algoritmo `none`, lavado con `--amend`, diffs falsos, archivos omitidos y merges) y el hook `pre-receive` con un servidor Git local.
+- 7 pruebas contra Gitea en Docker (`RUN_GITEA_TESTS=1`).
+- 19 pruebas con Claude (`RUN_LLM_TESTS=1`): los tres ejemplos y los 16 ataques.
 
 ### Limitaciones conocidas
 
 - **Contexto**: el LLM solo ve los cambios del commit. Los flujos de datos entre archivos pueden producir falsos positivos o negativos.
 - **No determinismo**: el mismo código puede producir resultados distintos entre ejecuciones. El umbral de severidad y las advertencias reducen el impacto.
 - **El recibo certifica el proceso, no la ausencia de vulnerabilidades**: si el análisis no detecta algo, el recibo dirá aprobado.
-- **El código sin analizar puede llegar a ramas no protegidas** de GitHub. Las protecciones impiden que entre a `main`. Rechazar el push requiere un servidor Git que admita hooks, con `verifier/pre_receive.py`.
 - **`--amend` honesto**: también se marca como no verificable. Se corrige con `git reset --soft HEAD~1` y un nuevo commit.
 - **Contribuciones externas**: todo commit necesita un recibo de este servidor, así que el repositorio no acepta contribuciones de quien no tenga acceso. Es lo esperado en un repositorio corporativo.
-- **Administrador del repositorio**: puede desactivar las reglas. Se mitiga separando la administración de seguridad del desarrollo.
+- **Administración de Gitea**: quien administra Gitea o el equipo donde corre Docker puede quitar el hook o subir commits por fuera del control. Se mitiga separando la administración de seguridad del desarrollo.
+- **Origen del verificador**: en esta instalación, Gitea monta `verifier/` desde la carpeta de quien ejecuta Docker Compose, lo que facilita probar cambios. En producción se copiaría dentro de la imagen, con una versión fija.
+- **Hook por repositorio**: `configurar_gitea.py` lo instala en `appsec/proyecto`. Otro repositorio necesita el mismo paso.
+- **Historial anterior**: el contenido inicial se sube antes de activar el hook, porque sus commits no tienen recibos. El commit `da4d980` tiene además un recibo de una versión anterior del formato.
+- **Mensajes de Gitea**: cuando el hook rechaza un pull request desde un fork, la web muestra un error genérico (500). El motivo queda en `docker logs appsec-gitea`.
 - **Llave privada**: quien la obtenga puede firmar recibos. En producción debe estar en un gestor de secretos y rotarse; el campo `kid` del recibo lo permite.
-- **Commits anteriores al formato actual**: el commit `da4d980` tiene un recibo de una versión anterior del formato y no pasa el verificador actual. La verificación en GitHub solo revisa los commits nuevos de cada PR o push.
-- **Despliegue**: el servidor corre localmente y por HTTP. En producción requiere HTTPS.
+- **Despliegue**: Gitea y el servidor de análisis corren localmente y por HTTP. En producción requieren HTTPS, un dominio propio y la URL de callback de la OAuth App ajustada.
+- **Evaluación**: a diferencia de GitHub, la evidencia no queda pública en la web; se reproduce con Docker y las pruebas automáticas, o con la réplica opcional a GitHub.
 
 ---
 
@@ -597,11 +746,13 @@ Durante el desarrollo se probó un archivo real de autenticación de 760 líneas
 | `server/recibos.py`, `server/registro.py` | Firma de recibos y registro de auditoría |
 | `server/config/prompts/` | Prompts versionados |
 | `verifier/recibos.py`, `verifier/verificar.py` | Verificador de recibos |
-| `verifier/pre_receive.py` | Hook `pre-receive` para servidores Git propios |
-| `.github/workflows/integridad.yml` | Verificación en GitHub Actions |
+| `verifier/pre_receive.py` | Hook `pre-receive` que corre dentro de Gitea |
+| `docker-compose.yml` | Servidor de análisis y Gitea |
+| `despliegue/analizador/`, `despliegue/gitea/` | Imágenes de Docker |
+| `scripts/configurar_gitea.py` | Configuración de Gitea y autorización de desarrolladores |
+| `.github/workflows/integridad.yml` | Verificación adicional en GitHub Actions, sobre la réplica |
 | `examples/` | Ejemplos vulnerable, seguro y con prompt injection |
-| `scripts/demo.py`, `scripts/demo_pre_receive.py` | Demostraciones del hook y del rechazo del push |
+| `scripts/demo.py`, `scripts/demo_pre_receive.py` | Demostraciones del hook y del rechazo del push sin Docker |
 | `scripts/generar_llaves.py` | Generación de las llaves de firma |
-| `docker-compose.yml`, `despliegue/`, `scripts/configurar_gitea.py` | Alternativa con Gitea ([`docs/gitea.md`](docs/gitea.md)) |
 | `docs/` | Capturas de la salida real |
 | `tests/` | Pruebas automáticas y corpus de ataques |

@@ -1,4 +1,4 @@
-<svg class="rich-terminal" viewBox="0 0 1238 416.0" xmlns="http://www.w3.org/2000/svg">
+<svg class="rich-terminal" viewBox="0 0 1458 1758.0" xmlns="http://www.w3.org/2000/svg">
     <!-- Generated with Rich https://www.textualize.io -->
     <style>
 
@@ -19,99 +19,317 @@
         font-weight: 700;
     }
 
-    .terminal-1185339721-matrix {
+    .terminal-560566582-matrix {
         font-family: Fira Code, monospace;
         font-size: 20px;
         line-height: 24.4px;
         font-variant-east-asian: full-width;
     }
 
-    .terminal-1185339721-title {
+    .terminal-560566582-title {
         font-size: 18px;
         font-weight: bold;
         font-family: arial;
     }
 
-    .terminal-1185339721-r1 { fill: #c5c8c6 }
-.terminal-1185339721-r2 { fill: #868887 }
-.terminal-1185339721-r3 { fill: #c5c8c6;font-weight: bold }
-.terminal-1185339721-r4 { fill: #cc555a }
-.terminal-1185339721-r5 { fill: #98a84b }
+    .terminal-560566582-r1 { fill: #98a84b;font-weight: bold }
+.terminal-560566582-r2 { fill: #c5c8c6 }
+.terminal-560566582-r3 { fill: #868887 }
     </style>
 
     <defs>
-    <clipPath id="terminal-1185339721-clip-terminal">
-      <rect x="0" y="0" width="1219.0" height="365.0" />
+    <clipPath id="terminal-560566582-clip-terminal">
+      <rect x="0" y="0" width="1438.6" height="1707.0" />
     </clipPath>
-    <clipPath id="terminal-1185339721-line-0">
-    <rect x="0" y="1.5" width="1220" height="24.65"/>
+    <clipPath id="terminal-560566582-line-0">
+    <rect x="0" y="1.5" width="1439.6" height="24.65"/>
             </clipPath>
-<clipPath id="terminal-1185339721-line-1">
-    <rect x="0" y="25.9" width="1220" height="24.65"/>
+<clipPath id="terminal-560566582-line-1">
+    <rect x="0" y="25.9" width="1439.6" height="24.65"/>
             </clipPath>
-<clipPath id="terminal-1185339721-line-2">
-    <rect x="0" y="50.3" width="1220" height="24.65"/>
+<clipPath id="terminal-560566582-line-2">
+    <rect x="0" y="50.3" width="1439.6" height="24.65"/>
             </clipPath>
-<clipPath id="terminal-1185339721-line-3">
-    <rect x="0" y="74.7" width="1220" height="24.65"/>
+<clipPath id="terminal-560566582-line-3">
+    <rect x="0" y="74.7" width="1439.6" height="24.65"/>
             </clipPath>
-<clipPath id="terminal-1185339721-line-4">
-    <rect x="0" y="99.1" width="1220" height="24.65"/>
+<clipPath id="terminal-560566582-line-4">
+    <rect x="0" y="99.1" width="1439.6" height="24.65"/>
             </clipPath>
-<clipPath id="terminal-1185339721-line-5">
-    <rect x="0" y="123.5" width="1220" height="24.65"/>
+<clipPath id="terminal-560566582-line-5">
+    <rect x="0" y="123.5" width="1439.6" height="24.65"/>
             </clipPath>
-<clipPath id="terminal-1185339721-line-6">
-    <rect x="0" y="147.9" width="1220" height="24.65"/>
+<clipPath id="terminal-560566582-line-6">
+    <rect x="0" y="147.9" width="1439.6" height="24.65"/>
             </clipPath>
-<clipPath id="terminal-1185339721-line-7">
-    <rect x="0" y="172.3" width="1220" height="24.65"/>
+<clipPath id="terminal-560566582-line-7">
+    <rect x="0" y="172.3" width="1439.6" height="24.65"/>
             </clipPath>
-<clipPath id="terminal-1185339721-line-8">
-    <rect x="0" y="196.7" width="1220" height="24.65"/>
+<clipPath id="terminal-560566582-line-8">
+    <rect x="0" y="196.7" width="1439.6" height="24.65"/>
             </clipPath>
-<clipPath id="terminal-1185339721-line-9">
-    <rect x="0" y="221.1" width="1220" height="24.65"/>
+<clipPath id="terminal-560566582-line-9">
+    <rect x="0" y="221.1" width="1439.6" height="24.65"/>
             </clipPath>
-<clipPath id="terminal-1185339721-line-10">
-    <rect x="0" y="245.5" width="1220" height="24.65"/>
+<clipPath id="terminal-560566582-line-10">
+    <rect x="0" y="245.5" width="1439.6" height="24.65"/>
             </clipPath>
-<clipPath id="terminal-1185339721-line-11">
-    <rect x="0" y="269.9" width="1220" height="24.65"/>
+<clipPath id="terminal-560566582-line-11">
+    <rect x="0" y="269.9" width="1439.6" height="24.65"/>
             </clipPath>
-<clipPath id="terminal-1185339721-line-12">
-    <rect x="0" y="294.3" width="1220" height="24.65"/>
+<clipPath id="terminal-560566582-line-12">
+    <rect x="0" y="294.3" width="1439.6" height="24.65"/>
             </clipPath>
-<clipPath id="terminal-1185339721-line-13">
-    <rect x="0" y="318.7" width="1220" height="24.65"/>
+<clipPath id="terminal-560566582-line-13">
+    <rect x="0" y="318.7" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-14">
+    <rect x="0" y="343.1" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-15">
+    <rect x="0" y="367.5" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-16">
+    <rect x="0" y="391.9" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-17">
+    <rect x="0" y="416.3" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-18">
+    <rect x="0" y="440.7" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-19">
+    <rect x="0" y="465.1" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-20">
+    <rect x="0" y="489.5" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-21">
+    <rect x="0" y="513.9" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-22">
+    <rect x="0" y="538.3" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-23">
+    <rect x="0" y="562.7" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-24">
+    <rect x="0" y="587.1" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-25">
+    <rect x="0" y="611.5" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-26">
+    <rect x="0" y="635.9" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-27">
+    <rect x="0" y="660.3" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-28">
+    <rect x="0" y="684.7" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-29">
+    <rect x="0" y="709.1" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-30">
+    <rect x="0" y="733.5" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-31">
+    <rect x="0" y="757.9" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-32">
+    <rect x="0" y="782.3" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-33">
+    <rect x="0" y="806.7" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-34">
+    <rect x="0" y="831.1" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-35">
+    <rect x="0" y="855.5" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-36">
+    <rect x="0" y="879.9" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-37">
+    <rect x="0" y="904.3" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-38">
+    <rect x="0" y="928.7" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-39">
+    <rect x="0" y="953.1" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-40">
+    <rect x="0" y="977.5" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-41">
+    <rect x="0" y="1001.9" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-42">
+    <rect x="0" y="1026.3" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-43">
+    <rect x="0" y="1050.7" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-44">
+    <rect x="0" y="1075.1" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-45">
+    <rect x="0" y="1099.5" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-46">
+    <rect x="0" y="1123.9" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-47">
+    <rect x="0" y="1148.3" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-48">
+    <rect x="0" y="1172.7" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-49">
+    <rect x="0" y="1197.1" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-50">
+    <rect x="0" y="1221.5" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-51">
+    <rect x="0" y="1245.9" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-52">
+    <rect x="0" y="1270.3" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-53">
+    <rect x="0" y="1294.7" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-54">
+    <rect x="0" y="1319.1" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-55">
+    <rect x="0" y="1343.5" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-56">
+    <rect x="0" y="1367.9" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-57">
+    <rect x="0" y="1392.3" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-58">
+    <rect x="0" y="1416.7" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-59">
+    <rect x="0" y="1441.1" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-60">
+    <rect x="0" y="1465.5" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-61">
+    <rect x="0" y="1489.9" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-62">
+    <rect x="0" y="1514.3" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-63">
+    <rect x="0" y="1538.7" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-64">
+    <rect x="0" y="1563.1" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-65">
+    <rect x="0" y="1587.5" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-66">
+    <rect x="0" y="1611.9" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-67">
+    <rect x="0" y="1636.3" width="1439.6" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-560566582-line-68">
+    <rect x="0" y="1660.7" width="1439.6" height="24.65"/>
             </clipPath>
     </defs>
 
-    <rect fill="#292929" stroke="rgba(255,255,255,0.35)" stroke-width="1" x="1" y="1" width="1236" height="414" rx="8"/><text class="terminal-1185339721-title" fill="#c5c8c6" text-anchor="middle" x="618" y="27">Servidor&#160;Git&#160;con&#160;hook&#160;pre-receive</text>
+    <rect fill="#292929" stroke="rgba(255,255,255,0.35)" stroke-width="1" x="1" y="1" width="1456" height="1756" rx="8"/><text class="terminal-560566582-title" fill="#c5c8c6" text-anchor="middle" x="728" y="27">Servidor&#160;Git&#160;con&#160;hook&#160;pre-receive</text>
             <g transform="translate(26,22)">
             <circle cx="0" cy="0" r="7" fill="#ff5f57"/>
             <circle cx="22" cy="0" r="7" fill="#febc2e"/>
             <circle cx="44" cy="0" r="7" fill="#28c840"/>
             </g>
         
-    <g transform="translate(9, 41)" clip-path="url(#terminal-1185339721-clip-terminal)">
+    <g transform="translate(9, 41)" clip-path="url(#terminal-560566582-clip-terminal)">
     
-    <g class="terminal-1185339721-matrix">
-    <text class="terminal-1185339721-r1" x="1220" y="20" textLength="12.2" clip-path="url(#terminal-1185339721-line-0)">
-</text><text class="terminal-1185339721-r2" x="0" y="44.4" textLength="366" clip-path="url(#terminal-1185339721-line-1)">#&#160;Commit&#160;hecho&#160;con&#160;--no-verify</text><text class="terminal-1185339721-r1" x="1220" y="44.4" textLength="12.2" clip-path="url(#terminal-1185339721-line-1)">
-</text><text class="terminal-1185339721-r3" x="0" y="68.8" textLength="585.6" clip-path="url(#terminal-1185339721-line-2)">$&#160;git&#160;commit&#160;--no-verify&#160;-m&#160;&quot;Agrega&#160;comandos.py&quot;</text><text class="terminal-1185339721-r1" x="1220" y="68.8" textLength="12.2" clip-path="url(#terminal-1185339721-line-2)">
-</text><text class="terminal-1185339721-r3" x="0" y="93.2" textLength="268.4" clip-path="url(#terminal-1185339721-line-3)">$&#160;git&#160;push&#160;origin&#160;main</text><text class="terminal-1185339721-r1" x="1220" y="93.2" textLength="12.2" clip-path="url(#terminal-1185339721-line-3)">
-</text><text class="terminal-1185339721-r4" x="0" y="117.6" textLength="1024.8" clip-path="url(#terminal-1185339721-line-4)">remote:&#160;FALLA&#160;&#160;f35e5cb1&#160;&#160;el&#160;commit&#160;no&#160;tiene&#160;recibo&#160;de&#160;análisis&#160;&#160;(Agrega&#160;comandos.py)</text><text class="terminal-1185339721-r1" x="1220" y="117.6" textLength="12.2" clip-path="url(#terminal-1185339721-line-4)">
-</text><text class="terminal-1185339721-r4" x="0" y="142" textLength="866.2" clip-path="url(#terminal-1185339721-line-5)">remote:&#160;Push&#160;rechazado:&#160;1&#160;commit(s)&#160;sin&#160;un&#160;recibo&#160;de&#160;integridad&#160;válido.</text><text class="terminal-1185339721-r1" x="1220" y="142" textLength="12.2" clip-path="url(#terminal-1185339721-line-5)">
-</text><text class="terminal-1185339721-r4" x="0" y="166.4" textLength="744.2" clip-path="url(#terminal-1185339721-line-6)">&#160;!&#160;[remote&#160;rejected]&#160;main&#160;-&gt;&#160;main&#160;(pre-receive&#160;hook&#160;declined)</text><text class="terminal-1185339721-r1" x="1220" y="166.4" textLength="12.2" clip-path="url(#terminal-1185339721-line-6)">
-</text><text class="terminal-1185339721-r4" x="0" y="190.8" textLength="305" clip-path="url(#terminal-1185339721-line-7)">Resultado:&#160;PUSH&#160;RECHAZADO</text><text class="terminal-1185339721-r1" x="1220" y="190.8" textLength="12.2" clip-path="url(#terminal-1185339721-line-7)">
-</text><text class="terminal-1185339721-r1" x="1220" y="215.2" textLength="12.2" clip-path="url(#terminal-1185339721-line-8)">
-</text><text class="terminal-1185339721-r2" x="0" y="239.6" textLength="353.8" clip-path="url(#terminal-1185339721-line-9)">#&#160;Commit&#160;analizado&#160;y&#160;aprobado</text><text class="terminal-1185339721-r1" x="1220" y="239.6" textLength="12.2" clip-path="url(#terminal-1185339721-line-9)">
-</text><text class="terminal-1185339721-r3" x="0" y="264" textLength="439.2" clip-path="url(#terminal-1185339721-line-10)">$&#160;git&#160;commit&#160;-m&#160;&quot;Agrega&#160;calculos.py&quot;</text><text class="terminal-1185339721-r1" x="1220" y="264" textLength="12.2" clip-path="url(#terminal-1185339721-line-10)">
-</text><text class="terminal-1185339721-r3" x="0" y="288.4" textLength="268.4" clip-path="url(#terminal-1185339721-line-11)">$&#160;git&#160;push&#160;origin&#160;main</text><text class="terminal-1185339721-r1" x="1220" y="288.4" textLength="12.2" clip-path="url(#terminal-1185339721-line-11)">
-</text><text class="terminal-1185339721-r5" x="0" y="312.8" textLength="732" clip-path="url(#terminal-1185339721-line-12)">remote:&#160;OK&#160;&#160;&#160;&#160;&#160;1a1f2c7a&#160;&#160;sirnaranjo&#160;&#160;&#160;&#160;&#160;&#160;&#160;Agrega&#160;calculos.py</text><text class="terminal-1185339721-r1" x="1220" y="312.8" textLength="12.2" clip-path="url(#terminal-1185339721-line-12)">
-</text><text class="terminal-1185339721-r5" x="0" y="337.2" textLength="402.6" clip-path="url(#terminal-1185339721-line-13)">&#160;&#160;&#160;9366352..1a1f2c7&#160;&#160;main&#160;-&gt;&#160;main</text><text class="terminal-1185339721-r1" x="1220" y="337.2" textLength="12.2" clip-path="url(#terminal-1185339721-line-13)">
-</text><text class="terminal-1185339721-r5" x="0" y="361.6" textLength="292.8" clip-path="url(#terminal-1185339721-line-14)">Resultado:&#160;PUSH&#160;ACEPTADO</text><text class="terminal-1185339721-r1" x="1220" y="361.6" textLength="12.2" clip-path="url(#terminal-1185339721-line-14)">
+    <g class="terminal-560566582-matrix">
+    <text class="terminal-560566582-r1" x="0" y="20" textLength="439.2" clip-path="url(#terminal-560566582-line-0)">$&#160;python&#160;scripts/demo_pre_receive.py</text><text class="terminal-560566582-r2" x="1439.6" y="20" textLength="12.2" clip-path="url(#terminal-560566582-line-0)">
+</text><text class="terminal-560566582-r2" x="1439.6" y="44.4" textLength="12.2" clip-path="url(#terminal-560566582-line-1)">
+</text><text class="terminal-560566582-r2" x="0" y="68.8" textLength="1220" clip-path="url(#terminal-560566582-line-2)">====================================================================================================</text><text class="terminal-560566582-r2" x="1439.6" y="68.8" textLength="12.2" clip-path="url(#terminal-560566582-line-2)">
+</text><text class="terminal-560566582-r2" x="0" y="93.2" textLength="366" clip-path="url(#terminal-560566582-line-3)">&#160;&#160;Commit&#160;hecho&#160;con&#160;--no-verify</text><text class="terminal-560566582-r2" x="1439.6" y="93.2" textLength="12.2" clip-path="url(#terminal-560566582-line-3)">
+</text><text class="terminal-560566582-r2" x="0" y="117.6" textLength="1220" clip-path="url(#terminal-560566582-line-4)">====================================================================================================</text><text class="terminal-560566582-r2" x="1439.6" y="117.6" textLength="12.2" clip-path="url(#terminal-560566582-line-4)">
+</text><text class="terminal-560566582-r2" x="0" y="142" textLength="585.6" clip-path="url(#terminal-560566582-line-5)">$&#160;git&#160;commit&#160;--no-verify&#160;-m&#160;&quot;Agrega&#160;comandos.py&quot;</text><text class="terminal-560566582-r2" x="1439.6" y="142" textLength="12.2" clip-path="url(#terminal-560566582-line-5)">
+</text><text class="terminal-560566582-r2" x="0" y="166.4" textLength="963.8" clip-path="url(#terminal-560566582-line-6)">Verificacion&#160;local&#160;del&#160;recibo............................................Failed</text><text class="terminal-560566582-r2" x="1439.6" y="166.4" textLength="12.2" clip-path="url(#terminal-560566582-line-6)">
+</text><text class="terminal-560566582-r2" x="0" y="190.8" textLength="378.2" clip-path="url(#terminal-560566582-line-7)">-&#160;hook&#160;id:&#160;genai-recibo-revisar</text><text class="terminal-560566582-r2" x="1439.6" y="190.8" textLength="12.2" clip-path="url(#terminal-560566582-line-7)">
+</text><text class="terminal-560566582-r2" x="0" y="215.2" textLength="170.8" clip-path="url(#terminal-560566582-line-8)">-&#160;exit&#160;code:&#160;1</text><text class="terminal-560566582-r2" x="1439.6" y="215.2" textLength="12.2" clip-path="url(#terminal-560566582-line-8)">
+</text><text class="terminal-560566582-r2" x="1439.6" y="239.6" textLength="12.2" clip-path="url(#terminal-560566582-line-9)">
+</text><text class="terminal-560566582-r2" x="0" y="264" textLength="1171.2" clip-path="url(#terminal-560566582-line-10)">Atención:&#160;el&#160;último&#160;commit&#160;no&#160;tiene&#160;recibo&#160;de&#160;análisis&#160;(por&#160;ejemplo,&#160;porque&#160;se&#160;usó&#160;--no-verify).</text><text class="terminal-560566582-r2" x="1439.6" y="264" textLength="12.2" clip-path="url(#terminal-560566582-line-10)">
+</text><text class="terminal-560566582-r2" x="0" y="288.4" textLength="1268.8" clip-path="url(#terminal-560566582-line-11)">No&#160;pasará&#160;la&#160;verificación&#160;de&#160;integridad&#160;en&#160;el&#160;repositorio&#160;remoto.&#160;Para&#160;corregirlo,&#160;si&#160;aún&#160;no&#160;lo&#160;subiste:</text><text class="terminal-560566582-r2" x="1439.6" y="288.4" textLength="12.2" clip-path="url(#terminal-560566582-line-11)">
+</text><text class="terminal-560566582-r2" x="0" y="312.8" textLength="329.4" clip-path="url(#terminal-560566582-line-12)">&#160;&#160;&#160;&#160;git&#160;reset&#160;--soft&#160;HEAD~1</text><text class="terminal-560566582-r2" x="1439.6" y="312.8" textLength="12.2" clip-path="url(#terminal-560566582-line-12)">
+</text><text class="terminal-560566582-r2" x="0" y="337.2" textLength="329.4" clip-path="url(#terminal-560566582-line-13)">&#160;&#160;&#160;&#160;git&#160;commit&#160;-m&#160;&quot;mensaje&quot;</text><text class="terminal-560566582-r2" x="1439.6" y="337.2" textLength="12.2" clip-path="url(#terminal-560566582-line-13)">
+</text><text class="terminal-560566582-r2" x="1439.6" y="361.6" textLength="12.2" clip-path="url(#terminal-560566582-line-14)">
+</text><text class="terminal-560566582-r2" x="0" y="386" textLength="402.6" clip-path="url(#terminal-560566582-line-15)">[main&#160;1c43433]&#160;Agrega&#160;comandos.py</text><text class="terminal-560566582-r2" x="1439.6" y="386" textLength="12.2" clip-path="url(#terminal-560566582-line-15)">
+</text><text class="terminal-560566582-r2" x="0" y="410.4" textLength="390.4" clip-path="url(#terminal-560566582-line-16)">&#160;1&#160;file&#160;changed,&#160;5&#160;insertions(+)</text><text class="terminal-560566582-r2" x="1439.6" y="410.4" textLength="12.2" clip-path="url(#terminal-560566582-line-16)">
+</text><text class="terminal-560566582-r2" x="0" y="434.8" textLength="378.2" clip-path="url(#terminal-560566582-line-17)">&#160;create&#160;mode&#160;100644&#160;comandos.py</text><text class="terminal-560566582-r2" x="1439.6" y="434.8" textLength="12.2" clip-path="url(#terminal-560566582-line-17)">
+</text><text class="terminal-560566582-r2" x="1439.6" y="459.2" textLength="12.2" clip-path="url(#terminal-560566582-line-18)">
+</text><text class="terminal-560566582-r2" x="0" y="483.6" textLength="268.4" clip-path="url(#terminal-560566582-line-19)">$&#160;git&#160;push&#160;origin&#160;HEAD</text><text class="terminal-560566582-r2" x="1439.6" y="483.6" textLength="12.2" clip-path="url(#terminal-560566582-line-19)">
+</text><text class="terminal-560566582-r2" x="0" y="508" textLength="1024.8" clip-path="url(#terminal-560566582-line-20)">remote:&#160;FALLA&#160;&#160;1c434334&#160;&#160;el&#160;commit&#160;no&#160;tiene&#160;recibo&#160;de&#160;análisis&#160;&#160;(Agrega&#160;comandos.py)</text><text class="terminal-560566582-r2" x="1439.6" y="508" textLength="12.2" clip-path="url(#terminal-560566582-line-20)">
+</text><text class="terminal-560566582-r2" x="0" y="532.4" textLength="85.4" clip-path="url(#terminal-560566582-line-21)">remote:</text><text class="terminal-560566582-r2" x="1439.6" y="532.4" textLength="12.2" clip-path="url(#terminal-560566582-line-21)">
+</text><text class="terminal-560566582-r2" x="0" y="556.8" textLength="1183.4" clip-path="url(#terminal-560566582-line-22)">remote:&#160;PUSH&#160;RECHAZADO&#160;por&#160;el&#160;control&#160;de&#160;seguridad:&#160;1&#160;commit(s)&#160;sin&#160;un&#160;recibo&#160;de&#160;análisis&#160;válido.</text><text class="terminal-560566582-r2" x="1439.6" y="556.8" textLength="12.2" clip-path="url(#terminal-560566582-line-22)">
+</text><text class="terminal-560566582-r2" x="0" y="581.2" textLength="85.4" clip-path="url(#terminal-560566582-line-23)">remote:</text><text class="terminal-560566582-r2" x="1439.6" y="581.2" textLength="12.2" clip-path="url(#terminal-560566582-line-23)">
+</text><text class="terminal-560566582-r2" x="0" y="605.6" textLength="573.4" clip-path="url(#terminal-560566582-line-24)">remote:&#160;&#160;&#160;Commit:&#160;&#160;1c434334&#160;&#160;Agrega&#160;comandos.py</text><text class="terminal-560566582-r2" x="1439.6" y="605.6" textLength="12.2" clip-path="url(#terminal-560566582-line-24)">
+</text><text class="terminal-560566582-r2" x="0" y="630" textLength="683.2" clip-path="url(#terminal-560566582-line-25)">remote:&#160;&#160;&#160;Motivo:&#160;&#160;el&#160;commit&#160;no&#160;tiene&#160;recibo&#160;de&#160;análisis</text><text class="terminal-560566582-r2" x="1439.6" y="630" textLength="12.2" clip-path="url(#terminal-560566582-line-25)">
+</text><text class="terminal-560566582-r2" x="0" y="654.4" textLength="1439.6" clip-path="url(#terminal-560566582-line-26)">remote:&#160;&#160;&#160;Causa:&#160;&#160;&#160;El&#160;commit&#160;no&#160;pasó&#160;por&#160;el&#160;análisis&#160;de&#160;seguridad:&#160;se&#160;hizo&#160;con&#160;--no-verify,&#160;sin&#160;los&#160;hooks&#160;instalados&#160;o</text><text class="terminal-560566582-r2" x="1439.6" y="654.4" textLength="12.2" clip-path="url(#terminal-560566582-line-26)">
+</text><text class="terminal-560566582-r2" x="0" y="678.8" textLength="402.6" clip-path="url(#terminal-560566582-line-27)">con&#160;rebase,&#160;cherry-pick&#160;o&#160;squash.</text><text class="terminal-560566582-r2" x="1439.6" y="678.8" textLength="12.2" clip-path="url(#terminal-560566582-line-27)">
+</text><text class="terminal-560566582-r2" x="0" y="703.2" textLength="85.4" clip-path="url(#terminal-560566582-line-28)">remote:</text><text class="terminal-560566582-r2" x="1439.6" y="703.2" textLength="12.2" clip-path="url(#terminal-560566582-line-28)">
+</text><text class="terminal-560566582-r2" x="0" y="727.6" textLength="1305.4" clip-path="url(#terminal-560566582-line-29)">remote:&#160;Ninguna&#160;rama&#160;se&#160;actualizó.&#160;Para&#160;corregirlo,&#160;rehacer&#160;los&#160;commits&#160;rechazados&#160;pasando&#160;por&#160;el&#160;análisis.</text><text class="terminal-560566582-r2" x="1439.6" y="727.6" textLength="12.2" clip-path="url(#terminal-560566582-line-29)">
+</text><text class="terminal-560566582-r2" x="0" y="752" textLength="439.2" clip-path="url(#terminal-560566582-line-30)">remote:&#160;Si&#160;es&#160;solo&#160;el&#160;último&#160;commit:</text><text class="terminal-560566582-r2" x="1439.6" y="752" textLength="12.2" clip-path="url(#terminal-560566582-line-30)">
+</text><text class="terminal-560566582-r2" x="0" y="776.4" textLength="427" clip-path="url(#terminal-560566582-line-31)">remote:&#160;&#160;&#160;&#160;&#160;git&#160;reset&#160;--soft&#160;HEAD~1</text><text class="terminal-560566582-r2" x="1439.6" y="776.4" textLength="12.2" clip-path="url(#terminal-560566582-line-31)">
+</text><text class="terminal-560566582-r2" x="0" y="800.8" textLength="427" clip-path="url(#terminal-560566582-line-32)">remote:&#160;&#160;&#160;&#160;&#160;git&#160;commit&#160;-m&#160;&quot;mensaje&quot;</text><text class="terminal-560566582-r2" x="1439.6" y="800.8" textLength="12.2" clip-path="url(#terminal-560566582-line-32)">
+</text><text class="terminal-560566582-r2" x="0" y="825.2" textLength="402.6" clip-path="url(#terminal-560566582-line-33)">remote:&#160;Y&#160;volver&#160;a&#160;hacer&#160;el&#160;push.</text><text class="terminal-560566582-r2" x="1439.6" y="825.2" textLength="12.2" clip-path="url(#terminal-560566582-line-33)">
+</text><text class="terminal-560566582-r2" x="0" y="849.6" textLength="85.4" clip-path="url(#terminal-560566582-line-34)">remote:</text><text class="terminal-560566582-r2" x="1439.6" y="849.6" textLength="12.2" clip-path="url(#terminal-560566582-line-34)">
+</text><text class="terminal-560566582-r2" x="0" y="874" textLength="744.2" clip-path="url(#terminal-560566582-line-35)">To&#160;C:\Users\Admin\AppData\Local\Temp\tmpn0e6tnc1\servidor.git</text><text class="terminal-560566582-r2" x="1439.6" y="874" textLength="12.2" clip-path="url(#terminal-560566582-line-35)">
+</text><text class="terminal-560566582-r2" x="0" y="898.4" textLength="744.2" clip-path="url(#terminal-560566582-line-36)">&#160;!&#160;[remote&#160;rejected]&#160;HEAD&#160;-&gt;&#160;main&#160;(pre-receive&#160;hook&#160;declined)</text><text class="terminal-560566582-r2" x="1439.6" y="898.4" textLength="12.2" clip-path="url(#terminal-560566582-line-36)">
+</text><text class="terminal-560566582-r2" x="0" y="922.8" textLength="1159" clip-path="url(#terminal-560566582-line-37)">error:&#160;failed&#160;to&#160;push&#160;some&#160;refs&#160;to&#160;&#x27;C:\Users\Admin\AppData\Local\Temp\tmpn0e6tnc1\servidor.git&#x27;</text><text class="terminal-560566582-r2" x="1439.6" y="922.8" textLength="12.2" clip-path="url(#terminal-560566582-line-37)">
+</text><text class="terminal-560566582-r2" x="1439.6" y="947.2" textLength="12.2" clip-path="url(#terminal-560566582-line-38)">
+</text><text class="terminal-560566582-r2" x="0" y="971.6" textLength="305" clip-path="url(#terminal-560566582-line-39)">Resultado:&#160;PUSH&#160;RECHAZADO</text><text class="terminal-560566582-r2" x="1439.6" y="971.6" textLength="12.2" clip-path="url(#terminal-560566582-line-39)">
+</text><text class="terminal-560566582-r2" x="1439.6" y="996" textLength="12.2" clip-path="url(#terminal-560566582-line-40)">
+</text><text class="terminal-560566582-r2" x="0" y="1020.4" textLength="1220" clip-path="url(#terminal-560566582-line-41)">====================================================================================================</text><text class="terminal-560566582-r2" x="1439.6" y="1020.4" textLength="12.2" clip-path="url(#terminal-560566582-line-41)">
+</text><text class="terminal-560566582-r2" x="0" y="1044.8" textLength="353.8" clip-path="url(#terminal-560566582-line-42)">&#160;&#160;Commit&#160;analizado&#160;y&#160;aprobado</text><text class="terminal-560566582-r2" x="1439.6" y="1044.8" textLength="12.2" clip-path="url(#terminal-560566582-line-42)">
+</text><text class="terminal-560566582-r2" x="0" y="1069.2" textLength="1220" clip-path="url(#terminal-560566582-line-43)">====================================================================================================</text><text class="terminal-560566582-r2" x="1439.6" y="1069.2" textLength="12.2" clip-path="url(#terminal-560566582-line-43)">
+</text><text class="terminal-560566582-r2" x="0" y="1093.6" textLength="439.2" clip-path="url(#terminal-560566582-line-44)">$&#160;git&#160;commit&#160;-m&#160;&quot;Agrega&#160;calculos.py&quot;</text><text class="terminal-560566582-r2" x="1439.6" y="1093.6" textLength="12.2" clip-path="url(#terminal-560566582-line-44)">
+</text><text class="terminal-560566582-r2" x="0" y="1118" textLength="963.8" clip-path="url(#terminal-560566582-line-45)">Analisis&#160;de&#160;seguridad&#160;con&#160;IA.............................................Passed</text><text class="terminal-560566582-r2" x="1439.6" y="1118" textLength="12.2" clip-path="url(#terminal-560566582-line-45)">
+</text><text class="terminal-560566582-r2" x="0" y="1142.4" textLength="256.2" clip-path="url(#terminal-560566582-line-46)">-&#160;hook&#160;id:&#160;genai-scan</text><text class="terminal-560566582-r2" x="1439.6" y="1142.4" textLength="12.2" clip-path="url(#terminal-560566582-line-46)">
+</text><text class="terminal-560566582-r2" x="0" y="1166.8" textLength="195.2" clip-path="url(#terminal-560566582-line-47)">-&#160;duration:&#160;2.7s</text><text class="terminal-560566582-r2" x="1439.6" y="1166.8" textLength="12.2" clip-path="url(#terminal-560566582-line-47)">
+</text><text class="terminal-560566582-r2" x="1439.6" y="1191.2" textLength="12.2" clip-path="url(#terminal-560566582-line-48)">
+</text><text class="terminal-560566582-r1" x="0" y="1215.6" textLength="231.8" clip-path="url(#terminal-560566582-line-49)">✓&#160;Análisis&#160;aprobado</text><text class="terminal-560566582-r2" x="1439.6" y="1215.6" textLength="12.2" clip-path="url(#terminal-560566582-line-49)">
+</text><text class="terminal-560566582-r3" x="0" y="1240" textLength="1207.8" clip-path="url(#terminal-560566582-line-50)">Análisis&#160;e591550c-1a7c-4eaf-b27b-86c783943001&#160;·&#160;sirnaranjo&#160;·&#160;claude-sonnet-5-5&#160;·&#160;security_review_v3</text><text class="terminal-560566582-r2" x="1439.6" y="1240" textLength="12.2" clip-path="url(#terminal-560566582-line-50)">
+</text><text class="terminal-560566582-r2" x="1439.6" y="1264.4" textLength="12.2" clip-path="url(#terminal-560566582-line-51)">
+</text><text class="terminal-560566582-r2" x="0" y="1288.8" textLength="963.8" clip-path="url(#terminal-560566582-line-52)">Recibo&#160;de&#160;integridad.....................................................Passed</text><text class="terminal-560566582-r2" x="1439.6" y="1288.8" textLength="12.2" clip-path="url(#terminal-560566582-line-52)">
+</text><text class="terminal-560566582-r2" x="0" y="1313.2" textLength="963.8" clip-path="url(#terminal-560566582-line-53)">Verificacion&#160;local&#160;del&#160;recibo............................................Passed</text><text class="terminal-560566582-r2" x="1439.6" y="1313.2" textLength="12.2" clip-path="url(#terminal-560566582-line-53)">
+</text><text class="terminal-560566582-r2" x="0" y="1337.6" textLength="402.6" clip-path="url(#terminal-560566582-line-54)">[main&#160;352935b]&#160;Agrega&#160;calculos.py</text><text class="terminal-560566582-r2" x="1439.6" y="1337.6" textLength="12.2" clip-path="url(#terminal-560566582-line-54)">
+</text><text class="terminal-560566582-r2" x="0" y="1362" textLength="390.4" clip-path="url(#terminal-560566582-line-55)">&#160;1&#160;file&#160;changed,&#160;2&#160;insertions(+)</text><text class="terminal-560566582-r2" x="1439.6" y="1362" textLength="12.2" clip-path="url(#terminal-560566582-line-55)">
+</text><text class="terminal-560566582-r2" x="0" y="1386.4" textLength="378.2" clip-path="url(#terminal-560566582-line-56)">&#160;create&#160;mode&#160;100644&#160;calculos.py</text><text class="terminal-560566582-r2" x="1439.6" y="1386.4" textLength="12.2" clip-path="url(#terminal-560566582-line-56)">
+</text><text class="terminal-560566582-r2" x="1439.6" y="1410.8" textLength="12.2" clip-path="url(#terminal-560566582-line-57)">
+</text><text class="terminal-560566582-r2" x="0" y="1435.2" textLength="268.4" clip-path="url(#terminal-560566582-line-58)">$&#160;git&#160;push&#160;origin&#160;HEAD</text><text class="terminal-560566582-r2" x="1439.6" y="1435.2" textLength="12.2" clip-path="url(#terminal-560566582-line-58)">
+</text><text class="terminal-560566582-r2" x="0" y="1459.6" textLength="732" clip-path="url(#terminal-560566582-line-59)">remote:&#160;OK&#160;&#160;&#160;&#160;&#160;352935bd&#160;&#160;sirnaranjo&#160;&#160;&#160;&#160;&#160;&#160;&#160;Agrega&#160;calculos.py</text><text class="terminal-560566582-r2" x="1439.6" y="1459.6" textLength="12.2" clip-path="url(#terminal-560566582-line-59)">
+</text><text class="terminal-560566582-r2" x="0" y="1484" textLength="744.2" clip-path="url(#terminal-560566582-line-60)">To&#160;C:\Users\Admin\AppData\Local\Temp\tmpn0e6tnc1\servidor.git</text><text class="terminal-560566582-r2" x="1439.6" y="1484" textLength="12.2" clip-path="url(#terminal-560566582-line-60)">
+</text><text class="terminal-560566582-r2" x="0" y="1508.4" textLength="402.6" clip-path="url(#terminal-560566582-line-61)">&#160;&#160;&#160;1e5b6dc..352935b&#160;&#160;HEAD&#160;-&gt;&#160;main</text><text class="terminal-560566582-r2" x="1439.6" y="1508.4" textLength="12.2" clip-path="url(#terminal-560566582-line-61)">
+</text><text class="terminal-560566582-r2" x="1439.6" y="1532.8" textLength="12.2" clip-path="url(#terminal-560566582-line-62)">
+</text><text class="terminal-560566582-r2" x="0" y="1557.2" textLength="292.8" clip-path="url(#terminal-560566582-line-63)">Resultado:&#160;PUSH&#160;ACEPTADO</text><text class="terminal-560566582-r2" x="1439.6" y="1557.2" textLength="12.2" clip-path="url(#terminal-560566582-line-63)">
+</text><text class="terminal-560566582-r2" x="1439.6" y="1581.6" textLength="12.2" clip-path="url(#terminal-560566582-line-64)">
+</text><text class="terminal-560566582-r2" x="0" y="1606" textLength="1220" clip-path="url(#terminal-560566582-line-65)">====================================================================================================</text><text class="terminal-560566582-r2" x="1439.6" y="1606" textLength="12.2" clip-path="url(#terminal-560566582-line-65)">
+</text><text class="terminal-560566582-r2" x="0" y="1630.4" textLength="109.8" clip-path="url(#terminal-560566582-line-66)">&#160;&#160;Resumen</text><text class="terminal-560566582-r2" x="1439.6" y="1630.4" textLength="12.2" clip-path="url(#terminal-560566582-line-66)">
+</text><text class="terminal-560566582-r2" x="0" y="1654.8" textLength="1220" clip-path="url(#terminal-560566582-line-67)">====================================================================================================</text><text class="terminal-560566582-r2" x="1439.6" y="1654.8" textLength="12.2" clip-path="url(#terminal-560566582-line-67)">
+</text><text class="terminal-560566582-r2" x="0" y="1679.2" textLength="378.2" clip-path="url(#terminal-560566582-line-68)">&#160;&#160;Push&#160;sin&#160;análisis:&#160;&#160;rechazado</text><text class="terminal-560566582-r2" x="1439.6" y="1679.2" textLength="12.2" clip-path="url(#terminal-560566582-line-68)">
+</text><text class="terminal-560566582-r2" x="0" y="1703.6" textLength="366" clip-path="url(#terminal-560566582-line-69)">&#160;&#160;Push&#160;con&#160;recibo:&#160;&#160;&#160;&#160;aceptado</text><text class="terminal-560566582-r2" x="1439.6" y="1703.6" textLength="12.2" clip-path="url(#terminal-560566582-line-69)">
 </text>
     </g>
     </g>

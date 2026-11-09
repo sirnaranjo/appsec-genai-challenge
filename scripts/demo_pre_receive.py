@@ -56,12 +56,13 @@ def intentar_push(clon, titulo, archivo, contenido, sin_analisis):
     print(f"$ git commit {' '.join([*opciones, '-m'])} \"Agrega {archivo}\"", flush=True)
     git(clon, "commit", *opciones, "-m", f"Agrega {archivo}", salida=True)
 
-    print("\n$ git push origin main", flush=True)
-    aceptado = git(clon, "push", "origin", "main", salida=True).returncode == 0
+    # Se sube la rama actual, sea cual sea su nombre
+    print("\n$ git push origin HEAD", flush=True)
+    aceptado = git(clon, "push", "origin", "HEAD", salida=True).returncode == 0
     print(f"\nResultado: {'PUSH ACEPTADO' if aceptado else 'PUSH RECHAZADO'}", flush=True)
     # Si se rechazó, el clon vuelve al estado del servidor para el siguiente intento
     if not aceptado:
-        git(clon, "reset", "-q", "--hard", "origin/main")
+        git(clon, "reset", "-q", "--hard", "@{upstream}")
     return aceptado
 
 
