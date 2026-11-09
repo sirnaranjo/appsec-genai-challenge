@@ -239,11 +239,9 @@ Señales para monitorear en el servidor:
 
 ### Instalación
 
-Clonar el repositorio, entrar en su carpeta y crear el entorno virtual:
-
 ```bash
-git clone <URL del repositorio>
-cd <carpeta del repositorio>
+git clone https://github.com/sirnaranjo/appsec-genai-challenge.git
+cd appsec-genai-challenge
 python -m venv .venv
 ```
 
