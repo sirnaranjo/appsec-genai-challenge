@@ -146,7 +146,7 @@ Como los dos nombres coinciden, el hook compara el usuario del recibo con el que
 ### Secretos
 
 - La llave privada de firma solo se monta en el contenedor de análisis, de solo lectura.
-- Gitea recibe solo la llave pública y el verificador, ambos de solo lectura. Un push no puede cambiar el verificador ni la llave que se usan para revisarlo.
+- Gitea recibe solo la llave pública, de solo lectura. El verificador se copia dentro de su imagen al construirla. Un push no puede cambiar el verificador ni la llave que se usan para revisarlo.
 - `.dockerignore` deja fuera de las imágenes el `.env`, `keys/` y `data/`.
 - La contraseña del administrador de Gitea se genera al azar y se guarda en `data/gitea-administrador.txt`, fuera del control de versiones.
 
@@ -204,7 +204,7 @@ Ningún control en la máquina del desarrollador es definitivo. Estas son las ev
 | Pull request desde un fork con commits sin recibo | Gitea copia esos commits al repositorio al abrir el PR y el hook rechaza la copia |
 | Force push o borrado de `main` | Protección de rama |
 | Agregar archivos al `exclude` de `.pre-commit-config.yaml` | El hook lee los filtros de la configuración ya aceptada en el servidor |
-| Modificar el verificador o la llave pública en un push | Gitea usa su propia copia, montada de solo lectura |
+| Modificar el verificador o la llave pública en un push | Gitea usa la copia de su imagen y la llave montada de solo lectura |
 | Instrucciones dentro del código para engañar al LLM | Pre-filtro determinístico y reglas del prompt (sección 4) |
 
 Señales para monitorear en el servidor:
@@ -505,7 +505,7 @@ docker compose start     # encender de nuevo
 docker logs appsec-gitea # registro de Gitea, incluidos los pushes rechazados
 ```
 
-Los cambios en `verifier/` se aplican en el siguiente push, sin reiniciar. Los cambios en `server/` requieren `docker compose up -d --build analizador`, y los del `.env`, `docker compose up -d --force-recreate analizador`. Usuarios, repositorios y el registro de análisis se guardan en volúmenes de Docker; `docker compose down -v` los elimina.
+Los cambios en `verifier/` requieren `docker compose up -d --build gitea`, porque el verificador se copia dentro de la imagen. Los cambios en `server/` requieren `docker compose up -d --build analizador`, y los del `.env`, `docker compose up -d --force-recreate analizador`. Usuarios, repositorios y el registro de análisis se guardan en volúmenes de Docker; `docker compose down -v` los elimina.
 
 ### Situaciones frecuentes
 
@@ -717,7 +717,6 @@ La diferencia con Gitea: en GitHub el commit del PR #1 llegó a su rama y quedó
 - **`--amend` honesto**: también se marca como no verificable. Se corrige con `git reset --soft HEAD~1` y un nuevo commit.
 - **Contribuciones externas**: todo commit necesita un recibo de este servidor, así que el repositorio no acepta contribuciones de quien no tenga acceso. Es lo esperado en un repositorio corporativo.
 - **Administración de Gitea**: quien administra Gitea o el equipo donde corre Docker puede quitar el hook o subir commits por fuera del control. Se mitiga separando la administración de seguridad del desarrollo.
-- **Origen del verificador**: en esta instalación, Gitea monta `verifier/` desde la carpeta de quien ejecuta Docker Compose, lo que facilita probar cambios. En producción se copiaría dentro de la imagen, con una versión fija.
 - **Hook por repositorio**: `configurar_gitea.py` lo instala en `appsec/proyecto`. Otro repositorio necesita el mismo paso.
 - **Historial anterior**: el contenido inicial se sube antes de activar el hook, porque sus commits no tienen recibos. El commit `da4d980` tiene además un recibo de una versión anterior del formato.
 - **Mensajes de Gitea**: cuando el hook rechaza un pull request desde un fork, la web muestra un error genérico (500). El motivo queda en `docker logs appsec-gitea`.

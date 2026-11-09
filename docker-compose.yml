@@ -17,7 +17,9 @@ services:
       - analizador-datos:/datos
 
   gitea:
-    build: ./despliegue/gitea
+    build:
+      context: .
+      dockerfile: despliegue/gitea/Dockerfile
     container_name: appsec-gitea
     environment:
       - USER_UID=1000
@@ -35,8 +37,7 @@ services:
       - "3000:3000"
     volumes:
       - gitea-datos:/data
-      # Gitea solo recibe el verificador y la llave pública, de solo lectura
-      - ./verifier:/appsec/verifier:ro
+      # Gitea solo recibe la llave pública, de solo lectura; el verificador va dentro de la imagen
       - ./keys/receipt_public.pem:/appsec/receipt_public.pem:ro
 
 volumes:
