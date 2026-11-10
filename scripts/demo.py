@@ -4,14 +4,24 @@ Requiere el servidor de análisis en ejecución. Uso:
     python scripts/demo.py [nombre_del_ejemplo ...]
 """
 
+import os
 import shutil
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
+from dotenv import dotenv_values
+
 RAIZ = Path(__file__).resolve().parent.parent
 EJEMPLOS = ["secure_app.py", "vulnerable_app.py", "prompt_injection_app.py"]
+
+
+def pasar_url_del_servidor():
+    # El repositorio temporal no tiene .env: el hook recibe por el entorno la URL del servidor de análisis
+    url = dotenv_values(RAIZ / ".env").get("APPSEC_SERVER_URL")
+    if url:
+        os.environ.setdefault("APPSEC_SERVER_URL", url)
 
 
 def git(repo, *args, salida=False):
@@ -48,6 +58,7 @@ def intentar_commit(repo, ejemplo):
 
 
 def main(ejemplos):
+    pasar_url_del_servidor()
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as directorio:
         repo = Path(directorio)
         preparar_repositorio(repo)

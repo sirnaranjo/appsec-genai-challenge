@@ -11,13 +11,23 @@ pública en keys/receipt_public.pem. Uso:
     python scripts/demo_pre_receive.py
 """
 
+import os
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
+from dotenv import dotenv_values
+
 RAIZ = Path(__file__).resolve().parent.parent
 LLAVE = RAIZ / "keys" / "receipt_public.pem"
+
+
+def pasar_url_del_servidor():
+    # El repositorio temporal no tiene .env: el hook recibe por el entorno la URL del servidor de análisis
+    url = dotenv_values(RAIZ / ".env").get("APPSEC_SERVER_URL")
+    if url:
+        os.environ.setdefault("APPSEC_SERVER_URL", url)
 
 
 def git(carpeta, *args, salida=False):
@@ -69,6 +79,7 @@ def intentar_push(clon, titulo, archivo, contenido, sin_analisis):
 
 
 def main():
+    pasar_url_del_servidor()
     if not LLAVE.exists():
         print(f"No se encontró la llave pública en {LLAVE}. Genérala con: python scripts/generar_llaves.py")
         return 1

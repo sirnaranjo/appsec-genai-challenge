@@ -149,7 +149,7 @@ Como los dos nombres coinciden, el hook compara el usuario del recibo con el que
 - La llave privada de firma solo se monta en el contenedor de análisis, de solo lectura.
 - Gitea recibe solo la llave pública, de solo lectura. El verificador se copia dentro de su imagen al construirla. Un push no puede cambiar el verificador ni la llave que se usan para revisarlo.
 - `.dockerignore` deja fuera de las imágenes el `.env`, `keys/` y `data/`.
-- La contraseña del administrador de Gitea la elige quien instala, con al menos 12 caracteres, o se genera al azar si presiona Enter. Se guarda en el almacén de credenciales del sistema operativo, como el token del cliente. Solo si el sistema no tiene uno (por ejemplo, un servidor Linux sin escritorio) se guarda en `data/gitea-administrador.txt`, legible solo por su dueño y fuera del control de versiones.
+- La contraseña del administrador de Gitea la elige quien instala, con al menos 8 caracteres (el mínimo que exige Gitea por defecto), o se genera al azar si presiona Enter. Se guarda en el almacén de credenciales del sistema operativo, como el token del cliente. Solo si el sistema no tiene uno (por ejemplo, un servidor Linux sin escritorio) se guarda en `data/gitea-administrador.txt`, legible solo por su dueño y fuera del control de versiones.
 
 ### Réplica y verificación en GitHub
 
@@ -268,26 +268,30 @@ Crear una OAuth App en <https://github.com/settings/applications/new>. La misma 
 - Homepage URL: `http://localhost:3000`
 - Authorization callback URL: `http://localhost:3000/user/oauth2/github/callback`. La usa Gitea; el Device Flow no la necesita.
 - Marcar **Enable Device Flow**.
+- No marcar **Expire user authorization tokens**. El cliente guarda un solo token y no lo renueva: con esa opción vencería a las 8 horas y habría que repetir `python hooks/login.py`. A Gitea no le afecta, porque solo usa la aplicación al iniciar sesión.
 - Copiar el Client ID y generar un client secret.
 
 ### Variables y llaves
 
-1. Copiar `.env.example` como `.env` y completar los valores:
+1. Copiar `.env.example` como `.env` y completar los valores vacíos. Los opcionales ya tienen su valor por defecto:
 
-| Variable | Descripción |
-|---|---|
-| `APPSEC_SERVER_URL` | URL del servidor de análisis, usada por el cliente: `http://127.0.0.1:8001` |
-| `ANTHROPIC_API_KEY` | API key de Anthropic |
-| `ANTHROPIC_MODEL` | Modelo. Por defecto `claude-sonnet-5-5` |
-| `ANTHROPIC_EFFORT` | Opcional. Esfuerzo del modelo: `low`, `medium` (por defecto) o `high` |
-| `PROMPT_VERSION` | Opcional. Versión del prompt. Por defecto `security_review_v3` |
-| `SEVERIDAD_BLOQUEO` | Opcional. Severidad mínima que bloquea el commit. Por defecto `MEDIA` |
-| `GITHUB_OAUTH_CLIENT_ID` | Client ID de la OAuth App |
-| `GITHUB_OAUTH_CLIENT_SECRET` | Client secret de la OAuth App. Solo lo reciben el servidor de análisis y Gitea |
-| `USUARIOS_PERMITIDOS` | Usuarios de GitHub autorizados para el análisis, separados por coma. Si está vacío no se autoriza a nadie |
-| `GITHUB_ESPEJO_URL`, `GITHUB_ESPEJO_TOKEN` | Opcionales. Repositorio de GitHub para la réplica y un token con escritura solo sobre ese repositorio |
+| Variable | Descripción | Por defecto |
+|---|---|---|
+| `APPSEC_SERVER_URL` | URL del servidor de análisis, usada por el cliente | `http://127.0.0.1:8001` |
+| `ANTHROPIC_API_KEY` | API key de Anthropic | |
+| `ANTHROPIC_MODEL` | Modelo de Claude que hace el análisis | `claude-sonnet-5-5` |
+| `ANTHROPIC_EFFORT` | Opcional. Esfuerzo del modelo: `low`, `medium` o `high`. Más esfuerzo es más lento y más costoso | `medium` |
+| `PROMPT_VERSION` | Opcional. Versión del prompt: nombre de un archivo de `server/config/prompts` | `security_review_v3` |
+| `SEVERIDAD_BLOQUEO` | Opcional. Severidad mínima que bloquea el commit: `BAJA`, `MEDIA`, `ALTA` o `CRITICA`. Las menores se muestran como advertencia | `MEDIA` |
+| `GITHUB_OAUTH_CLIENT_ID` | Client ID de la OAuth App | |
+| `GITHUB_OAUTH_CLIENT_SECRET` | Client secret de la OAuth App. Solo lo reciben el servidor de análisis y Gitea | |
+| `USUARIOS_PERMITIDOS` | Usuarios de GitHub autorizados para el análisis, separados por coma. Si está vacío no se autoriza a nadie | |
+| `RECEIPT_PRIVATE_KEY_PATH` | Llave privada de firma. Solo fuera de Docker | `keys/receipt_private.pem` |
+| `DATABASE_PATH` | Registro de auditoría de los análisis. Solo fuera de Docker | `data/appsec.db` |
+| `GITEA_URL` | Opcional. Dirección de Gitea que usa `configurar_gitea.py` | `http://localhost:3000` |
+| `GITHUB_ESPEJO_URL`, `GITHUB_ESPEJO_TOKEN` | Opcionales. Réplica a GitHub (ver [Réplica opcional a GitHub](#réplica-opcional-a-github)). Si alguna está vacía no se configura | |
 
-En Docker, la llave privada y el registro de auditoría tienen rutas fijas dentro del contenedor (`docker-compose.yml`); `RECEIPT_PRIVATE_KEY_PATH` y `DATABASE_PATH` solo se usan al ejecutar el servidor fuera de Docker.
+En Docker, la llave privada y el registro de auditoría tienen rutas fijas dentro del contenedor (`docker-compose.yml`), que reemplazan las del `.env`.
 
 2. Generar el par de llaves de firma. El script no sobrescribe una llave existente y la carpeta `keys/` está en `.gitignore`:
 
@@ -316,7 +320,7 @@ Configurar Gitea: administrador, login con GitHub, organización `appsec`, equip
 python scripts/configurar_gitea.py
 ```
 
-El historial existente se sube antes de activar el hook, porque sus commits no tienen recibos. La primera vez, el script pide la contraseña del administrador (dos veces y sin mostrarla); con Enter genera una aleatoria. Queda en el almacén de credenciales del sistema y se consulta con `python scripts/configurar_gitea.py --clave-administrador`, para entrar a la web como `administrador`. Si se pierde, volver a ejecutar el script la pide de nuevo y se la asigna al administrador.
+El historial existente se sube antes de activar el hook, porque sus commits no tienen recibos. La primera vez, el script pide la contraseña del administrador (dos veces y sin mostrarla), de al menos 8 caracteres porque es el mínimo que Gitea acepta por defecto; con Enter genera una aleatoria de 32. Queda en el almacén de credenciales del sistema y se consulta con `python scripts/configurar_gitea.py --clave-administrador`, para entrar a la web como `administrador`. Si se pierde, volver a ejecutar el script la pide de nuevo y se la asigna al administrador.
 
 ### Cliente (cada desarrollador)
 
@@ -327,7 +331,10 @@ El historial existente se sube antes de activar el hook, porque sus commits no t
 python scripts/configurar_gitea.py --autorizar <usuario de GitHub>
 ```
 
-3. Crear un token de acceso en Gitea, en *Configuración → Aplicaciones*, con permiso de lectura y escritura sobre repositorios. Es la contraseña que pide `git push`.
+3. Crear un token de acceso en Gitea, en *Configuración → Aplicaciones*, con permiso de lectura y escritura sobre repositorios. Es la contraseña que pide `git push`. Gitea lo muestra una sola vez: guardarlo en un lugar seguro, como un gestor de contraseñas. Para no escribirlo en cada push:
+   - Windows y macOS: Git Credential Manager lo recuerda después del primer push.
+   - Linux, en memoria durante una hora: `git config --global credential.helper "cache --timeout=3600"`.
+   - Linux, de forma permanente: `git config --global credential.helper store`. Lo guarda sin cifrar en `~/.git-credentials`, así que no conviene en equipos compartidos.
 4. Instalar los hooks. Se instalan cuatro: `pre-commit`, `pre-merge-commit`, `commit-msg` y `post-commit`.
 
 ```bash
@@ -348,11 +355,36 @@ git remote add gitea http://localhost:3000/appsec/proyecto.git
 
 ### Réplica opcional a GitHub
 
-Con `GITHUB_ESPEJO_URL` y `GITHUB_ESPEJO_TOKEN` en el `.env`, `configurar_gitea.py` configura una réplica automática: cada push aceptado en Gitea se copia a ese repositorio. Para usar también la verificación en GitHub Actions sobre la réplica, crear en ese repositorio la variable `APPSEC_PUBLIC_KEY` (*Settings → Secrets and variables → Actions → Variables*) con el contenido de `keys/receipt_public.pem`.
+Con `GITHUB_ESPEJO_URL` y `GITHUB_ESPEJO_TOKEN` en el `.env`, `configurar_gitea.py` configura una réplica automática: cada push aceptado en Gitea se copia a ese repositorio, y además se sincroniza cada 8 horas. No es necesaria para evaluar la solución.
+
+- `GITHUB_ESPEJO_URL`: crear en <https://github.com/new> un repositorio nuevo y vacío (sin README, `.gitignore` ni licencia) y copiar su dirección HTTPS, por ejemplo `https://github.com/<usuario>/appsec-genai-replica.git`. La réplica sobrescribe el destino, así que nunca debe ser un repositorio con trabajo propio.
+- `GITHUB_ESPEJO_TOKEN`: crear un token *fine-grained* en <https://github.com/settings/personal-access-tokens/new>, con acceso solo a ese repositorio (*Only select repositories*) y los permisos **Contents** y **Workflows** en *Read and write*. Workflows es necesario porque el proyecto incluye `.github/workflows/`. GitHub muestra el token una sola vez.
+
+Después de completarlas, volver a ejecutar `python scripts/configurar_gitea.py`.
+
+Para usar también la verificación en GitHub Actions sobre la réplica, crear en ese repositorio la variable `APPSEC_PUBLIC_KEY` (*Settings → Secrets and variables → Actions → Variables*). Su valor es el contenido completo de `keys/receipt_public.pem`, en formato PEM y con las líneas de inicio y fin:
+
+```
+-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEA...
+-----END PUBLIC KEY-----
+```
+
+Se muestra con `cat keys/receipt_public.pem` (`Get-Content keys\receipt_public.pem` en PowerShell). No agregar rulesets a la réplica: Gitea necesita escribir directamente en sus ramas.
 
 ### Evaluación rápida
 
-Para comprobar solo el rechazo de los push no hacen falta la OAuth App, la API key ni iniciar sesión. Las pruebas automáticas crean un repositorio y usuarios temporales en Gitea, firman los recibos con la llave local y los eliminan al terminar:
+Las pruebas automáticas comprueban el rechazo de los push contra el Gitea en ejecución. Crean un repositorio y usuarios temporales, firman los recibos con la llave local y los eliminan al terminar: no modifican el repositorio `proyecto`, el `.env` ni las cuentas existentes.
+
+**Con la configuración completa** (secciones anteriores), basta con ejecutarlas:
+
+```bash
+RUN_GITEA_TESTS=1 pytest tests/test_gitea.py -v
+```
+
+En PowerShell: `$env:RUN_GITEA_TESTS = "1"` y luego `pytest tests/test_gitea.py -v`.
+
+**Sin configurar nada**, en lugar de las secciones anteriores. No hacen falta la OAuth App, la API key ni iniciar sesión, pero sin ellas no se pueden analizar commits propios:
 
 ```bash
 cp .env.example .env
@@ -362,7 +394,7 @@ python scripts/configurar_gitea.py
 RUN_GITEA_TESTS=1 pytest tests/test_gitea.py -v
 ```
 
-En PowerShell: `Copy-Item .env.example .env` en lugar de `cp`, y `$env:RUN_GITEA_TESTS = "1"` antes de ejecutar `pytest`. Sin OAuth App, `configurar_gitea.py` omite el login con GitHub e indica que lo omitió.
+El primer comando reemplaza el `.env`: no ejecutarlo si ya tiene valores. En PowerShell: `Copy-Item .env.example .env` en lugar de `cp`. Sin OAuth App, `configurar_gitea.py` omite el login con GitHub e indica que lo omitió.
 
 ---
 

@@ -43,8 +43,8 @@ SERVICIO_KEYRING = "appsec-genai-gitea-administrador"
 ALMACEN = "almacén de credenciales del sistema"
 # Solo si el sistema no tiene almacén de credenciales, como un servidor Linux sin escritorio
 ARCHIVO_CLAVE = RAIZ / "data" / "gitea-administrador.txt"
-# Longitud mínima de una contraseña escrita por quien instala
-CLAVE_MINIMA = 12
+# Longitud mínima de una contraseña escrita por quien instala; es la que exige Gitea por defecto
+CLAVE_MINIMA = 8
 # Definen qué se analiza y cómo se verifica: en main no se cambian con un push ni con el merge de un desarrollador.
 # Por ejemplo, agregar una ruta al exclude y luego subir código vulnerable en ella
 ARCHIVOS_PROTEGIDOS = [".pre-commit-config.yaml", ".gitattributes", "verifier/**", "hooks/**", ".github/**"]
