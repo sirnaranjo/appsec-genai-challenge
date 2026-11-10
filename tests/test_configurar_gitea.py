@@ -61,7 +61,7 @@ def test_enter_genera_una_clave_aleatoria(monkeypatch):
     assert len(gitea.pedir_clave()) >= 32
 
 
-def test_la_clave_indicada_debe_ser_larga_y_confirmarse(monkeypatch):
-    pendientes = respuestas(monkeypatch, "corta", "una-clave-larga", "otra-distinta", "una-clave-larga", "una-clave-larga")
-    assert gitea.pedir_clave() == "una-clave-larga"
+def test_la_clave_indicada_debe_tener_8_caracteres_y_confirmarse(monkeypatch):
+    pendientes = respuestas(monkeypatch, "1234567", "12345678", "otra-distinta", "12345678", "12345678")
+    assert gitea.pedir_clave() == "12345678"
     assert pendientes == []
