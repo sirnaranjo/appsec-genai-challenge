@@ -550,6 +550,7 @@ Los cambios en `verifier/` requieren `docker compose up -d --build gitea`, porqu
 | Aviso post-commit por `--no-verify` | Igual que el anterior: el commit se rehace pasando por el análisis |
 | Push rechazado | Seguir la corrección que muestra el mensaje: rehacer los commits rechazados pasando por el análisis |
 | Push rechazado porque el recibo pertenece a otra persona | Cada quien sube sus propios commits. Para integrar el trabajo de otra persona, usar un pull request |
+| Push rechazado con "la firma del recibo no es válida" en commits traídos de GitHub | Cada instalación tiene sus propias llaves, así que los recibos de otra instalación no son válidos. Para actualizar Gitea con esa versión: eliminar el repositorio `appsec/proyecto` como administrador (*Configuración → Zona de peligro*), ejecutar `python scripts/configurar_gitea.py` para subirla de nuevo, y luego `git fetch gitea` y `git branch -u gitea/main` |
 | Gitea responde 403 al hacer push | El usuario no tiene permiso de escritura: `python scripts/configurar_gitea.py --autorizar <usuario>` |
 | Push a `main` rechazado con "protected from changing file" | El push modifica un archivo protegido. Subirlo a otra rama, abrir un pull request y que lo integre un administrador (contraseña con `--clave-administrador`) |
 | Gitea no muestra "Iniciar sesión con GitHub" | Completar la OAuth App en el `.env` y volver a ejecutar `python scripts/configurar_gitea.py` |
@@ -601,6 +602,22 @@ El mensaje de usuario envuelve los cambios en una etiqueta con una marca aleator
 | Pre-filtro determinístico (`server/prefiltro.py`) | Reglas sin IA: detecta órdenes al revisor, falsas auditorías, cierre de etiquetas, respuestas JSON preescritas, roles falsos y caracteres Unicode invisibles o de control de dirección (Trojan Source, CVE-2021-42574). Siempre bloquea |
 | Señales y contradicciones | El pre-filtro señala patrones peligrosos (archivo, línea y tipo, sin copiar código). Si una señal de confianza alta no aparece en la respuesta del LLM, se agrega una advertencia y queda registrada |
 | Salida limpia en la terminal | El texto del LLM puede repetir código del atacante: se eliminan las secuencias de escape antes de mostrarlo |
+
+### Servidores Git: Gitea y GitHub
+
+**Gitea, donde se bloquea el push.** Un commit hecho con `git commit --no-verify` se salta los hooks locales, y nada en el equipo del desarrollador puede impedirlo. Para que ese código no llegue al repositorio hay que verificarlo en el servidor que recibe el push, con un hook `pre-receive`. Eso requiere un servidor Git administrado por el propio equipo: GitHub.com no permite instalar hooks propios, y GitHub Actions se ejecuta cuando el código ya está en el repositorio. Se eligió Gitea porque:
+
+- **Es simple**: una sola imagen de Docker, con SQLite, configurada por variables de entorno y por su API desde un script.
+- **Admite hooks `pre-receive`** por repositorio e indica quién hace el push (`GITEA_PUSHER_NAME`).
+- **Se integra con GitHub**: inicio de sesión con la misma OAuth App, los mismos nombres de usuario y réplica automática a un repositorio de GitHub.
+
+**GitHub, identidad y publicación.**
+
+- **OAuth 2.0 con Device Flow**: GitHub lo ofrece listo para herramientas de terminal, sin que el cliente necesite un servidor web para recibir la autorización. La misma OAuth App sirve para el análisis y para iniciar sesión en Gitea.
+- **Publicación**: aloja este repositorio para compartirlo y evaluarlo.
+- **Réplica opcional**: puede recibir una copia de cada push aceptado en Gitea, donde GitHub Actions vuelve a verificar los recibos como capa adicional.
+
+Las otras opciones consideradas están en [Alternativas evaluadas](#alternativas-evaluadas).
 
 ### Autenticación
 
